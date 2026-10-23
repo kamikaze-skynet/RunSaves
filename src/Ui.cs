@@ -150,12 +150,22 @@ internal static class PauseButton
         try
         {
             bool show = Plugin.Enabled.Value && Plugin.ShowSaveButton.Value && Game.IsServer && Recorder.RunActive; // click says why if it can't save
-            if (button is null || button.WasCollected) { button = null; label = null; if (show) Build(__instance); }
+            // Each run has its own pause menu, destroyed when the run ends. A button from an earlier run is a dead
+            // reference (destroyed but not garbage-collected), so check it's alive and part of this menu.
+            if (!Alive(button) || !SameMenu(__instance)) { button = null; label = null; if (show) Build(__instance); }
             if (button != null) button.SetActive(show);
             if (label != null) label.text = "Save Run";
         }
         catch (Exception ex) { Plugin.Log.LogError($"Pause menu button: {ex}"); }
     }
+
+    private static bool SameMenu(PauseMenuManager menu)
+    {
+        var template = menu.settingsButton != null ? menu.settingsButton : menu.resumeButton;
+        return template != null && button.transform.parent == template.transform.parent;
+    }
+
+    private static bool Alive(UnityEngine.Object o) => o is not null && !o.WasCollected && o != null; // != null: Unity's destroyed check
 
     private static void Build(PauseMenuManager menu)
     {
@@ -191,7 +201,7 @@ internal static class PauseButton
         if (resetLabelAt > 0f && Time.unscaledTime >= resetLabelAt)
         {
             resetLabelAt = 0f;
-            if (label is not null && !label.WasCollected) label.text = "Save Run";
+            if (Alive(label)) label.text = "Save Run";
         }
     }
 }
