@@ -1,0 +1,10 @@
+bin/
+obj/
+dist/
+*.user
+.vs/
+.idea/
+# analysis outputs (contain game data; don't commit)
+tools/methods.tsv
+tools/Runtime.cs
+__pycache__/

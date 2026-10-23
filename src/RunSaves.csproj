@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>RunSaves</AssemblyName>
+    <RootNamespace>RunSaves</RootNamespace>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>disable</Nullable>
+    <Version>1.0.0</Version>
+    <DebugType>none</DebugType>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <NoWarn>CS0436;CS8632</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    Point these at your game. BepInEx IL2CPP must have run once so BepInEx\interop exists.
+      dotnet build -c Release -p:GameDir="D:\SteamLibrary\steamapps\common\The Spell Brigade"
+    r2modman/Gale profile instead of a game-folder install:
+      dotnet build -c Release -p:BepInExDir="%APPDATA%\r2modmanPlus-local\TheSpellBrigade\profiles\Default\BepInEx"
+    Add -p:CopyToPlugins=true to copy the built DLL into BepInEx\plugins.
+  -->
+  <PropertyGroup>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\The Spell Brigade</GameDir>
+    <BepInExDir Condition="'$(BepInExDir)' == ''">$(GameDir)\BepInEx</BepInExDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="$(BepInExDir)\core\*.dll" Private="false" />
+    <Reference Include="$(BepInExDir)\interop\*.dll" Private="false" />
+  </ItemGroup>
+
+  <Target Name="CopyToPlugins" AfterTargets="Build" Condition="'$(CopyToPlugins)' == 'true'">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(BepInExDir)\plugins" />
+    <Message Importance="high" Text="Copied $(TargetFileName) to $(BepInExDir)\plugins" />
+  </Target>
+</Project>
