@@ -18,9 +18,9 @@ internal static class Saver
     internal static void OnRunStarted(bool restored)
     {
         autosavePending = false;
+        // Autosave always runs (the previous save is kept as save.prev.json). Until this run has saved once,
+        // a save on disk belongs to another run, so the end-of-run clean-up leaves it alone.
         OwnsSave = restored || !SaveStore.Exists;
-        if (!OwnsSave && Plugin.AutosaveEachWave.Value)
-            Toast.Show("You have a saved run, so autosave is off for this run.\nUse Save Run in the pause menu to save over it.", 6f);
     }
 
     internal static bool CanSave(out string why)
@@ -54,7 +54,9 @@ internal static class Saver
 
     private static void Autosave()
     {
-        if (Save("auto", out string msg) && Plugin.ToastOnAutosave.Value) Toast.Show(msg.Replace("Run saved", "Autosaved"), 2.5f);
+        if (!Save("auto", out string msg)) return;
+        OwnsSave = true;
+        if (Plugin.ToastOnAutosave.Value) Toast.Show(msg.Replace("Run saved", "Autosaved"), 2.5f);
     }
 
     internal static bool Save(string reason, out string message)
@@ -132,7 +134,7 @@ internal static class Saver
     {
         try
         {
-            if (!Plugin.AutosaveEachWave.Value || Restorer.Busy || !Recorder.RunActive || !OwnsSave) return;
+            if (!Plugin.AutosaveEachWave.Value || Restorer.Busy || !Recorder.RunActive) return;
             if ((__instance.CurrentWave?.Value ?? 0) <= 1) return;
             if (Game.StoreBusy)
             {
@@ -155,7 +157,10 @@ internal static class Saver
         {
             if (runState != RunState.IsSuccessful && runState != RunState.IsFailure) return;
             if (!Game.IsServer || !Recorder.RunActive || !OwnsSave) return; // don't delete another run's save
-            if (Plugin.ClearSaveWhenRunEnds.Value && SaveStore.Exists)
+            string when = Plugin.ClearSaveWhen.Value;
+            bool clear = string.Equals(when, "WonOrLost", StringComparison.OrdinalIgnoreCase)
+                         || (string.Equals(when, "Won", StringComparison.OrdinalIgnoreCase) && runState == RunState.IsSuccessful);
+            if (clear && SaveStore.Exists)
             {
                 SaveStore.Delete();
                 Plugin.Log.LogInfo($"Run ended ({runState}): saved run cleared.");

@@ -95,6 +95,7 @@ internal static class Toast
     private static GameObject canvas, panel;
     private static TextMeshProUGUI text;
     private static float hideAt;
+    private const float ToastWidth = 360f;
 
     internal static void Show(string message, float seconds)
     {
@@ -104,20 +105,23 @@ internal static class Toast
             {
                 var font = UiKit.Font();
                 if (font == null) { Plugin.Log.LogInfo(message); return; }
+                // Small box in the top-right corner.
                 canvas = UiKit.Canvas("RunSaves_Toast", 520);
-                panel = UiKit.Rect("Toast", canvas.transform, Vector2.zero, new Vector2(900f, 80f));
+                panel = UiKit.Rect("Toast", canvas.transform, Vector2.zero, new Vector2(ToastWidth, 40f));
                 var rt = panel.GetComponent<RectTransform>();
-                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
-                rt.anchoredPosition = new Vector2(0f, -110f);
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 1f);
+                rt.anchoredPosition = new Vector2(-20f, -20f);
                 var bg = panel.AddComponent<Image>();
-                bg.color = new Color(0.08f, 0.05f, 0.14f, 0.88f);
+                bg.color = new Color(0.08f, 0.05f, 0.14f, 0.85f);
                 bg.raycastTarget = false;
-                text = UiKit.Text("Text", panel.transform, font, 22f, Vector2.zero, new Vector2(860f, 70f));
+                text = UiKit.Text("Text", panel.transform, font, 15f, Vector2.zero, new Vector2(ToastWidth - 20f, 30f), TextAlignmentOptions.Left);
             }
             text.text = message;
-            int lines = message.Split('\n').Length;
-            panel.GetComponent<RectTransform>().sizeDelta = new Vector2(900f, 30f + lines * 28f);
-            text.GetComponent<RectTransform>().sizeDelta = new Vector2(860f, 20f + lines * 28f);
+            float h = 0f;
+            try { h = text.GetPreferredValues(message, ToastWidth - 20f, 0f).y; } catch { }
+            if (h <= 0f) h = message.Split('\n').Length * 19f;
+            panel.GetComponent<RectTransform>().sizeDelta = new Vector2(ToastWidth, h + 14f);
+            text.GetComponent<RectTransform>().sizeDelta = new Vector2(ToastWidth - 20f, h + 4f);
             canvas.SetActive(true);
             hideAt = Time.unscaledTime + seconds;
         }

@@ -5,8 +5,8 @@ Save a run and pick it up later: after quitting, a crash, or restarting the game
 ## Saving (host)
 
 - **Save Run** in the pause menu.
-- **Autosave** at the start of every wave, so a crash costs at most one wave. If a level-up shop is open, it waits until everyone has picked.
-- If you already have a saved run and start a different one, autosave stays off so it doesn't replace your save. Press Save Run to save over it.
+- **Autosave** at the start of every wave, in every run, including restored ones, so a crash costs at most one wave. If a level-up shop is open, it waits until everyone has picked. The previous save is kept as a backup.
+- A restored run keeps saving like any other, so you can play a run across as many sessions as you like.
 - Optional save key (off by default, see config).
 
 A save holds:
@@ -43,7 +43,7 @@ Players are matched by their Steam/Epic account. Someone on a different account 
 | General | Enabled | true | Turn saving and restoring on or off. |
 | Saving | AutosaveEachWave | true | Save when each new wave starts. |
 | Saving | ShowAutosaveMessage | true | Show a short message on autosave. |
-| Saving | ClearSaveWhenRunEnds | true | Delete the save when the run is won or lost. Quitting or crashing keeps it. |
+| Saving | ClearSaveWhen | Won | When to delete the save: Won (after a loss you can resume and retry), WonOrLost, or Never. |
 | Saving | PauseMenuButton | true | Add Save Run to the pause menu. |
 | Saving | SaveKey | (empty) | Optional key to save, e.g. F5. |
 | Restoring | LobbyPrompt | true | Show the saved run in the lobby. |

@@ -22,14 +22,14 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.RunSaves";
     public const string Name = "RunSaves";
-    public const string Version = "1.0.2";
+    public const string Version = "1.1.0";
 
     internal static new ManualLogSource Log;
 
     internal static ConfigEntry<bool> Enabled;
     internal static ConfigEntry<bool> AutosaveEachWave;
     internal static ConfigEntry<bool> ToastOnAutosave;
-    internal static ConfigEntry<bool> ClearSaveWhenRunEnds;
+    internal static ConfigEntry<string> ClearSaveWhen;
     internal static ConfigEntry<bool> ShowSaveButton;
     internal static ConfigEntry<string> SaveKey;
     internal static ConfigEntry<bool> ShowLobbyPrompt;
@@ -42,11 +42,12 @@ public class Plugin : BasePlugin
         Enabled = Config.Bind("General", "Enabled", true, "Turn run saving and restoring on or off.");
 
         AutosaveEachWave = Config.Bind("Saving", "AutosaveEachWave", true,
-            "Host: save automatically when each new wave starts (covers crashes).");
+            "Host: save automatically when each new wave starts, in every run, including restored ones (the previous save is kept as save.prev.json).");
         ToastOnAutosave = Config.Bind("Saving", "ShowAutosaveMessage", true,
             "Show a short message when an autosave happens.");
-        ClearSaveWhenRunEnds = Config.Bind("Saving", "ClearSaveWhenRunEnds", true,
-            "Delete the save when the run is won or lost. Quitting or crashing keeps it.");
+        ClearSaveWhen = Config.Bind("Saving", "ClearSaveWhen", "Won",
+            new ConfigDescription("When to delete the save at the end of a run. Won = only after a win (after a loss you can load the last autosave and try again). WonOrLost = after a win or a loss. Never = keep it.",
+                new AcceptableValueList<string>("Won", "WonOrLost", "Never")));
         ShowSaveButton = Config.Bind("Saving", "PauseMenuButton", true,
             "Host: add a Save Run button to the pause menu.");
         SaveKey = Config.Bind("Saving", "SaveKey", "",
