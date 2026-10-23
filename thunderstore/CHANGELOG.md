@@ -2,7 +2,7 @@
 
 ## 1.1.0
 - Autosave always runs, at the start of every wave in every run, including restored ones. It no longer turns itself off when an older save exists. The previous save is kept as `save.prev.json`.
-- The save is now only deleted after a **win**. After a loss you can resume from the last autosave and try again. New setting `ClearSaveWhen` (Won / WonOrLost / Never) replaces `ClearSaveWhenRunEnds`.
+- Saves are no longer deleted automatically when a run is won or lost. Only the lobby's **Delete** button removes one, so after a loss you can resume from the last autosave and try again. The `ClearSaveWhenRunEnds` setting is gone.
 - Messages are smaller and sit in the top-right corner.
 
 ## 1.0.2

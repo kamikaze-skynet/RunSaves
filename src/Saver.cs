@@ -4,7 +4,7 @@ using HarmonyLib;
 
 namespace RunSaves;
 
-/// <summary>Builds the save from the live run (host only), plus autosave and clean-up at the end of a run.</summary>
+/// <summary>Builds the save from the live run (host only), plus autosave. Saves are never deleted automatically: only the lobby's Delete button removes one.</summary>
 [HarmonyPatch]
 internal static class Saver
 {
@@ -146,26 +146,5 @@ internal static class Saver
             Autosave();
         }
         catch (Exception ex) { Plugin.Log.LogError($"Autosave: {ex}"); }
-    }
-
-    // Won or lost: the save is no longer useful. Abandoning (quitting) keeps it.
-    [HarmonyPatch(typeof(RunStateMessage), nameof(RunStateMessage.Set))]
-    [HarmonyPostfix]
-    private static void RunEnded(RunState runState)
-    {
-        try
-        {
-            if (runState != RunState.IsSuccessful && runState != RunState.IsFailure) return;
-            if (!Game.IsServer || !Recorder.RunActive || !OwnsSave) return; // don't delete another run's save
-            string when = Plugin.ClearSaveWhen.Value;
-            bool clear = string.Equals(when, "WonOrLost", StringComparison.OrdinalIgnoreCase)
-                         || (string.Equals(when, "Won", StringComparison.OrdinalIgnoreCase) && runState == RunState.IsSuccessful);
-            if (clear && SaveStore.Exists)
-            {
-                SaveStore.Delete();
-                Plugin.Log.LogInfo($"Run ended ({runState}): saved run cleared.");
-            }
-        }
-        catch (Exception ex) { Plugin.Log.LogError($"Run end: {ex}"); }
     }
 }
