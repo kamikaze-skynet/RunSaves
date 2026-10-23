@@ -10,7 +10,7 @@ Save a run and pick it up later: after quitting, a crash, or restarting the game
 - **Saves are never deleted automatically**, not even after a win or a loss. Only the **Delete** button in the lobby removes one.
 - Optional save key (off by default, see config).
 
-A save holds:
+A save holds (in addition to the list below, each artifact's stacks and how many revives each player has performed):
 
 - the world, loop and wave;
 - the party level and XP;
@@ -43,6 +43,8 @@ Players are matched by their Steam/Epic account. Someone on a different account 
 |---|---|---|---|
 | General | Enabled | true | Turn saving and restoring on or off. |
 | Saving | AutosaveEachWave | true | Save when each new wave starts. |
+| Saving | AutosaveIntervalSeconds | 60 | Also save quietly every this many seconds (0 = off). |
+| Saving | SaveOnQuit | true | Save when the host quits the run from the pause menu. |
 | Saving | ShowAutosaveMessage | true | Show a short message on autosave. |
 | Saving | PauseMenuButton | true | Add Save Run to the pause menu. |
 | Saving | SaveKey | (empty) | Optional key to save, e.g. F5. |

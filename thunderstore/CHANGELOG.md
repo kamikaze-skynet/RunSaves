@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0
+- Artifact stacks are saved and restored: artifacts that grow during a run (per revive, per objective, per health pickup, per infusion, per common upgrade) keep their stacks. Revives performed are kept too.
+- Saves when the host quits the run from the pause menu, and quietly every 60 seconds (`AutosaveIntervalSeconds`), so quitting mid-wave keeps the upgrades and levels from that wave. A restore still starts at the beginning of the saved wave.
+- Fix: Save Run was missing from the pause menu in every run after the first one in a session, including resumed runs.
+
 ## 1.1.1
 - Fix: Save Run was missing from the pause menu in every run after the first one in a session (including resumed runs). The button belonged to the previous run's menu, which the game destroys. It's now added to each new pause menu.
 

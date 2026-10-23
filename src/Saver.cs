@@ -17,6 +17,7 @@ internal static class Saver
 
     internal static void OnRunStarted(bool restored)
     {
+        lastSaveAt = UnityEngine.Time.unscaledTime;
         autosavePending = false;
         // Autosave always runs (the previous save is kept as save.prev.json). Until this run has saved once,
         // a save on disk belongs to another run, so the end-of-run clean-up leaves it alone.
@@ -43,8 +44,20 @@ internal static class Saver
     }
 
     /// <summary>Called every frame: an autosave that waited for a shop to close.</summary>
+    private static float lastSaveAt;
+
     internal static void Tick()
     {
+        // Background save every AutosaveIntervalSeconds, so quitting or a crash mid-wave keeps the upgrades
+        // and levels gained since the wave started (a restore still starts at the beginning of that wave).
+        int interval = Plugin.AutosaveIntervalSeconds.Value;
+        if (interval > 0 && Recorder.RunActive && !Restorer.Busy && !Game.StoreBusy
+            && UnityEngine.Time.unscaledTime - lastSaveAt >= interval && Saver.CanSave(out _))
+        {
+            lastSaveAt = UnityEngine.Time.unscaledTime;
+            if (Save("auto", out _)) OwnsSave = true;
+        }
+
         if (!autosavePending) return;
         if (!Recorder.RunActive || UnityEngine.Time.unscaledTime > autosaveGiveUpAt) { autosavePending = false; return; }
         if (Restorer.Busy || Game.StoreBusy) return;
@@ -56,6 +69,7 @@ internal static class Saver
     {
         if (!Save("auto", out string msg)) return;
         OwnsSave = true;
+        lastSaveAt = UnityEngine.Time.unscaledTime;
         if (Plugin.ToastOnAutosave.Value) Toast.Show(msg.Replace("Run saved", "Autosaved"), 2.5f);
     }
 
@@ -107,6 +121,8 @@ internal static class Saver
                     WasHost = known?.WasHost ?? false,
                     Spells = known?.Spells != null ? new List<string>(known.Spells) : new List<string>(),
                     Improvements = Recorder.Log.TryGetValue(key, out var log) ? new List<Improvement>(log) : new List<Improvement>(),
+                    ArtifactStacks = known?.ArtifactStacks != null ? new Dictionary<string, float>(known.ArtifactStacks) : new Dictionary<string, float>(),
+                    RevivesPerformed = known?.RevivesPerformed ?? 0,
                 };
                 save.Players.Add(sp);
             }
@@ -146,5 +162,18 @@ internal static class Saver
             Autosave();
         }
         catch (Exception ex) { Plugin.Log.LogError($"Autosave: {ex}"); }
+    }
+
+    // Host quits the run from the pause menu: save first, so the run continues from here next time.
+    [HarmonyPatch(typeof(ConfirmQuitPanel), nameof(ConfirmQuitPanel.Quit))]
+    [HarmonyPrefix]
+    private static void Quitting()
+    {
+        try
+        {
+            if (!Plugin.SaveOnQuit.Value || !CanSave(out _)) return;
+            if (Save("quit", out _)) OwnsSave = true;
+        }
+        catch (Exception ex) { Plugin.Log.LogError($"Save on quit: {ex}"); }
     }
 }

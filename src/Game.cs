@@ -144,4 +144,63 @@ internal static class Game
     }
 
     internal static bool TryParse<T>(string s, out T value) where T : struct, Enum => Enum.TryParse(s, out value);
+
+    // ---------- artifact stacks ----------
+
+    internal static PlayerArtifacts ArtifactsOf(GameplayPlayerIdentity p)
+    {
+        try { return p.Artifacts?.TryCast<PlayerArtifacts>(); } catch { return null; }
+    }
+
+    /// <summary>Stacks of each artifact this player has (e.g. per revive, per objective, per health pickup).</summary>
+    internal static Dictionary<string, float> ArtifactStacksOf(GameplayPlayerIdentity p)
+    {
+        var d = new Dictionary<string, float>();
+        try
+        {
+            var values = ArtifactsOf(p)?.artifactValues;
+            if (values == null) return d;
+            for (int i = 0; i < values.Count; i++)
+            {
+                var v = values[i];
+                if (v == null) continue;
+                float stacks = v.Stacks;
+                if (stacks != 0f) d[v.ArtifactType.ToString()] = stacks;
+            }
+        }
+        catch (Exception ex) { Plugin.Log.LogWarning($"Reading artifact stacks: {ex.Message}"); }
+        return d;
+    }
+
+    /// <summary>Sets saved stacks on this player's artifacts (on this game). Returns how many were set.</summary>
+    internal static unsafe int SetArtifactStacks(GameplayPlayerIdentity p, Dictionary<string, float> saved)
+    {
+        int set = 0;
+        if (saved == null || saved.Count == 0) return 0;
+        var pa = ArtifactsOf(p);
+        var values = pa?.artifactValues;
+        if (values == null) return 0;
+        for (int i = 0; i < values.Count; i++)
+        {
+            var v = values[i];
+            if (v == null || !saved.TryGetValue(v.ArtifactType.ToString(), out float stacks)) continue;
+            // Stacks only has a getter on the interface; each artifact value keeps it in an auto-property field.
+            IntPtr obj = v.Pointer;
+            IntPtr field = IntPtr.Zero;
+            for (IntPtr k = Il2CppInterop.Runtime.IL2CPP.il2cpp_object_get_class(obj); k != IntPtr.Zero && field == IntPtr.Zero;
+                 k = Il2CppInterop.Runtime.IL2CPP.il2cpp_class_get_parent(k))
+                field = Il2CppInterop.Runtime.IL2CPP.il2cpp_class_get_field_from_name(k, "<Stacks>k__BackingField");
+            if (field == IntPtr.Zero) continue;
+            int offset = (int)Il2CppInterop.Runtime.IL2CPP.il2cpp_field_get_offset(field);
+            *(float*)((byte*)obj + offset) = stacks;
+            try { pa.NotifyStackChanged(v.ArtifactType, stacks); } catch { } // the HUD's artifact stack display
+            set++;
+        }
+        return set;
+    }
+
+    internal static int RevivesPerformedOf(GameplayPlayerIdentity p)
+    {
+        try { return p.RevivesPerformed; } catch { return 0; }
+    }
 }

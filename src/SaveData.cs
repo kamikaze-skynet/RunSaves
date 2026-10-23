@@ -36,6 +36,10 @@ public class SavedPlayer
     public bool WasHost { get; set; }
     public List<string> Spells { get; set; } = new();
     public List<Improvement> Improvements { get; set; } = new();
+    // Counters that grow during a run (not upgrades): artifact stacks (per revive, per objective, per health
+    // pickup, ...) and how many revives this player has performed.
+    public Dictionary<string, float> ArtifactStacks { get; set; } = new();
+    public int RevivesPerformed { get; set; }
 }
 
 public class RunSave

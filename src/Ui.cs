@@ -316,7 +316,7 @@ public class RunSavesUI : MonoBehaviour
         {
             title.text = "SAVED RUN";
             body.text = save.Summary();
-            status.text = $"Saved {save.SavedAt} ({(save.Reason == "auto" ? "autosave" : "saved from the menu")})";
+            status.text = $"Saved {save.SavedAt} ({(save.Reason == "auto" ? "autosave" : save.Reason == "quit" ? "saved when you quit" : "saved from the menu")})";
             resumeLabel.text = "Resume";
         }
         deleteLabel.text = Time.unscaledTime < deleteConfirmUntil ? "Sure? Click again" : "Delete";

@@ -70,6 +70,8 @@ internal static class Recorder
             sp.WasHost = p.IsOwner;
             var spells = Game.SpellsOf(p);
             if (spells.Count > 0) sp.Spells = spells.ConvertAll(s => s.ToString());
+            sp.ArtifactStacks = Game.ArtifactStacksOf(p);
+            sp.RevivesPerformed = Game.RevivesPerformedOf(p);
         }
         catch { }
     }

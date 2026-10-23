@@ -361,6 +361,15 @@ internal static class Restorer
 
     private static bool revivesUsedSinceStart;
 
+    internal static int ApplyCounters(GameplayPlayerIdentity p, Dictionary<string, float> stacks, int revivesPerformed)
+    {
+        int set = 0;
+        try { set = Game.SetArtifactStacks(p, stacks); }
+        catch (Exception ex) { Plugin.Log.LogError($"Restore (artifact stacks): {ex.Message}"); }
+        try { if (revivesPerformed > p.RevivesPerformed) p.RevivesPerformed = revivesPerformed; } catch { }
+        return set;
+    }
+
     private static void SetLevelAndRevives(RunSave save)
     {
         revivesUsedSinceStart = false;
@@ -399,6 +408,15 @@ internal static class Restorer
             var rv = Game.Revives;
             if (rv?.CurrentRevives != null && rv.CurrentRevives.Value != save.Revives && !revivesUsedSinceStart)
                 rv.CurrentRevives.Value = save.Revives;
+
+            // Counters that grow during a run: artifact stacks and revives performed. Set after the replay
+            // (replaying can add stacks of its own, e.g. per infusion), on every game.
+            foreach (var m in matches)
+            {
+                int set = ApplyCounters(m.Player, m.Saved.ArtifactStacks, m.Saved.RevivesPerformed);
+                Net.SendCounters(m.Player.OwnerClientId, m.Saved.ArtifactStacks, m.Saved.RevivesPerformed);
+                if (set > 0) Plugin.Log.LogInfo($"Restore: {set} artifact stacks for {Game.NameOf(m.Player)}.");
+            }
 
             foreach (var m in matches) Recorder.Remember(m.Player);
         }

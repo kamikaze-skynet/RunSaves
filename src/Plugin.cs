@@ -22,12 +22,14 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.RunSaves";
     public const string Name = "RunSaves";
-    public const string Version = "1.1.1";
+    public const string Version = "1.2.0";
 
     internal static new ManualLogSource Log;
 
     internal static ConfigEntry<bool> Enabled;
     internal static ConfigEntry<bool> AutosaveEachWave;
+    internal static ConfigEntry<int> AutosaveIntervalSeconds;
+    internal static ConfigEntry<bool> SaveOnQuit;
     internal static ConfigEntry<bool> ToastOnAutosave;
     internal static ConfigEntry<bool> ShowSaveButton;
     internal static ConfigEntry<string> SaveKey;
@@ -42,6 +44,11 @@ public class Plugin : BasePlugin
 
         AutosaveEachWave = Config.Bind("Saving", "AutosaveEachWave", true,
             "Host: save automatically when each new wave starts, in every run, including restored ones (the previous save is kept as save.prev.json).");
+        AutosaveIntervalSeconds = Config.Bind("Saving", "AutosaveIntervalSeconds", 60,
+            new ConfigDescription("Host: also save quietly every this many seconds (0 = off). Keeps upgrades and levels gained mid-wave; a restore still starts at the beginning of the saved wave.",
+                new AcceptableValueRange<int>(0, 600)));
+        SaveOnQuit = Config.Bind("Saving", "SaveOnQuit", true,
+            "Host: save when quitting the run from the pause menu.");
         ToastOnAutosave = Config.Bind("Saving", "ShowAutosaveMessage", true,
             "Show a short message when an autosave happens.");
         ShowSaveButton = Config.Bind("Saving", "PauseMenuButton", true,

@@ -20,7 +20,8 @@ internal static class Net
 {
     private const string SpellsMsg = "girthy_mods.RunSaves.Spells";
     private const string TimeMsg = "girthy_mods.RunSaves.Time";
-    private static CustomMessagingManager.HandleNamedMessageDelegate spellsHandler, timeHandler; // kept alive for IL2CPP
+    private const string CountersMsg = "girthy_mods.RunSaves.Counters";
+    private static CustomMessagingManager.HandleNamedMessageDelegate spellsHandler, timeHandler, countersHandler; // kept alive for IL2CPP
 
     // Client side: spells waiting for the local wizard to be ready.
     internal static List<SpellType> PendingSpells;
@@ -38,6 +39,8 @@ internal static class Net
             timeHandler ??= DelegateSupport.ConvertDelegate<CustomMessagingManager.HandleNamedMessageDelegate>(new Action<ulong, FastBufferReader>(OnTime));
             nm.CustomMessagingManager.RegisterNamedMessageHandler(SpellsMsg, spellsHandler);
             nm.CustomMessagingManager.RegisterNamedMessageHandler(TimeMsg, timeHandler);
+            countersHandler ??= DelegateSupport.ConvertDelegate<CustomMessagingManager.HandleNamedMessageDelegate>(new Action<ulong, FastBufferReader>(OnCounters));
+            nm.CustomMessagingManager.RegisterNamedMessageHandler(CountersMsg, countersHandler);
         }
         catch (Exception ex) { Plugin.Log.LogError($"Listen: {ex}"); }
     }
@@ -62,6 +65,39 @@ internal static class Net
 
     internal static void SendTime(float cycleTime, float runTime) =>
         Send(TimeMsg, cycleTime.ToString(CultureInfo.InvariantCulture) + ";" + runTime.ToString(CultureInfo.InvariantCulture), null);
+
+    // "clientId|revivesPerformed|Type=stacks,Type=stacks" to everyone: each game sets that player's counters.
+    internal static void SendCounters(ulong client, Dictionary<string, float> stacks, int revivesPerformed)
+    {
+        var parts = new List<string>();
+        if (stacks != null)
+            foreach (var kv in stacks) parts.Add(kv.Key + "=" + kv.Value.ToString(CultureInfo.InvariantCulture));
+        if (parts.Count == 0 && revivesPerformed == 0) return;
+        Send(CountersMsg, client.ToString(CultureInfo.InvariantCulture) + "|" + revivesPerformed.ToString(CultureInfo.InvariantCulture) + "|" + string.Join(",", parts), null);
+    }
+
+    private static void OnCounters(ulong sender, FastBufferReader reader)
+    {
+        try
+        {
+            reader.ReadValueSafe(out string payload, false);
+            var f = payload.Split('|');
+            if (f.Length < 3) return;
+            ulong client = ulong.Parse(f[0], CultureInfo.InvariantCulture);
+            int revives = int.Parse(f[1], CultureInfo.InvariantCulture);
+            var stacks = new Dictionary<string, float>();
+            foreach (var kv in f[2].Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                int eq = kv.IndexOf('=');
+                if (eq > 0) stacks[kv.Substring(0, eq)] = float.Parse(kv.Substring(eq + 1), CultureInfo.InvariantCulture);
+            }
+            var p = Game.PlayerFor(client);
+            if (p == null) return;
+            int set = Restorer.ApplyCounters(p, stacks, revives);
+            Plugin.Log.LogInfo($"Host restored run: {set} artifact stacks for {Game.NameOf(p)}.");
+        }
+        catch (Exception ex) { Plugin.Log.LogError($"Receive counters: {ex}"); }
+    }
 
     private static void OnSpells(ulong sender, FastBufferReader reader)
     {
