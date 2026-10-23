@@ -259,25 +259,28 @@ public class RunSavesUI : MonoBehaviour
         var font = UiKit.Font();
         if (font == null) return;
         canvas = UiKit.Canvas("RunSaves_Lobby", 505);
-        panel = UiKit.Rect("Panel", canvas.transform, Vector2.zero, new Vector2(820f, 230f));
+        // A narrow column on the side of the lobby (clear of the mission bar at the top, the lobby code
+        // bottom-right and the wizard buttons on the left), buttons stacked.
+        panel = UiKit.Rect("Panel", canvas.transform, Vector2.zero, new Vector2(440f, 400f));
         var rt = panel.GetComponent<RectTransform>();
-        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
-        rt.anchoredPosition = new Vector2(0f, -24f);
+        bool left = string.Equals(Plugin.LobbyPanelSide.Value, "Left", StringComparison.OrdinalIgnoreCase);
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(left ? 0f : 1f, 0.5f);
+        rt.anchoredPosition = new Vector2(left ? 190f : -28f, 20f);
         var bg = panel.AddComponent<Image>();
         bg.color = new Color(0.08f, 0.05f, 0.14f, 0.9f);
 
-        title = UiKit.Text("Title", panel.transform, font, 24f, new Vector2(0f, 88f), new Vector2(780f, 36f));
+        title = UiKit.Text("Title", panel.transform, font, 23f, new Vector2(0f, 168f), new Vector2(400f, 34f));
         title.color = new Color(1f, 0.85f, 0.35f);
-        body = UiKit.Text("Body", panel.transform, font, 19f, new Vector2(0f, 30f), new Vector2(780f, 76f));
-        status = UiKit.Text("Status", panel.transform, font, 16f, new Vector2(0f, -26f), new Vector2(780f, 30f));
+        body = UiKit.Text("Body", panel.transform, font, 18f, new Vector2(0f, 98f), new Vector2(400f, 104f));
+        status = UiKit.Text("Status", panel.transform, font, 15f, new Vector2(0f, 20f), new Vector2(400f, 48f));
         status.color = new Color(1f, 1f, 1f, 0.6f);
 
         resumeAct ??= DelegateSupport.ConvertDelegate<UnityAction>(new Action(() => instance?.OnResume()));
         deleteAct ??= DelegateSupport.ConvertDelegate<UnityAction>(new Action(() => instance?.OnDelete()));
         hideAct ??= DelegateSupport.ConvertDelegate<UnityAction>(new Action(() => instance?.OnHide()));
-        resumeLabel = UiKit.Button("Resume", panel.transform, font, "Resume", new Vector2(-230f, -78f), new Vector2(200f, 50f), resumeAct, new Color(0.2f, 0.55f, 0.3f, 0.95f)).label;
-        deleteLabel = UiKit.Button("Delete", panel.transform, font, "Delete", new Vector2(0f, -78f), new Vector2(200f, 50f), deleteAct, new Color(0.55f, 0.2f, 0.2f, 0.95f)).label;
-        hideLabel = UiKit.Button("Hide", panel.transform, font, "Hide", new Vector2(230f, -78f), new Vector2(200f, 50f), hideAct, new Color(0.35f, 0.22f, 0.6f, 0.95f)).label;
+        resumeLabel = UiKit.Button("Resume", panel.transform, font, "Resume", new Vector2(0f, -50f), new Vector2(360f, 48f), resumeAct, new Color(0.2f, 0.55f, 0.3f, 0.95f)).label;
+        deleteLabel = UiKit.Button("Delete", panel.transform, font, "Delete", new Vector2(0f, -110f), new Vector2(360f, 48f), deleteAct, new Color(0.55f, 0.2f, 0.2f, 0.95f)).label;
+        hideLabel = UiKit.Button("Hide", panel.transform, font, "Hide", new Vector2(0f, -170f), new Vector2(360f, 48f), hideAct, new Color(0.35f, 0.22f, 0.6f, 0.95f)).label;
         Refresh();
     }
 

@@ -22,7 +22,7 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.RunSaves";
     public const string Name = "RunSaves";
-    public const string Version = "1.0.1";
+    public const string Version = "1.0.2";
 
     internal static new ManualLogSource Log;
 
@@ -33,6 +33,7 @@ public class Plugin : BasePlugin
     internal static ConfigEntry<bool> ShowSaveButton;
     internal static ConfigEntry<string> SaveKey;
     internal static ConfigEntry<bool> ShowLobbyPrompt;
+    internal static ConfigEntry<string> LobbyPanelSide;
 
     public override void Load()
     {
@@ -53,6 +54,8 @@ public class Plugin : BasePlugin
 
         ShowLobbyPrompt = Config.Bind("Restoring", "LobbyPrompt", true,
             "Host: show the saved run in the lobby with Resume / Delete / Hide.");
+        LobbyPanelSide = Config.Bind("Restoring", "LobbyPanelSide", "Right",
+            new ConfigDescription("Which side of the lobby the saved-run panel sits on.", new AcceptableValueList<string>("Right", "Left")));
 
         var harmony = new Harmony(Guid);
         harmony.PatchAll(typeof(Recorder));

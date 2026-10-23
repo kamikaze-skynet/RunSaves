@@ -1,6 +1,6 @@
 {
   "name": "RunSaves",
-  "version_number": "1.0.1",
+  "version_number": "1.0.2",
   "website_url": "https://github.com/kamikaze-skynet/RunSaves",
   "description": "Save a run and continue it after quitting, a crash or a restart. Save from the pause menu (plus autosave each wave), resume from the lobby. Solo and multiplayer.",
   "dependencies": [

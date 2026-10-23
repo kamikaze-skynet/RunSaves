@@ -18,7 +18,7 @@ A save holds:
 
 ## Restoring (host)
 
-1. In the lobby, a **Saved Run** panel shows the world, wave, level and players. Press **Resume**.
+1. In the lobby, a **Saved Run** panel on the right shows the world, wave, level and players. Press **Resume**.
 2. Everyone rejoins and picks **the same wizards** as before.
 3. Start a run in **the same world**.
 
@@ -47,6 +47,7 @@ Players are matched by their Steam/Epic account. Someone on a different account 
 | Saving | PauseMenuButton | true | Add Save Run to the pause menu. |
 | Saving | SaveKey | (empty) | Optional key to save, e.g. F5. |
 | Restoring | LobbyPrompt | true | Show the saved run in the lobby. |
+| Restoring | LobbyPanelSide | Right | Which side of the lobby the panel sits on (Right / Left). |
 
 The save is stored in `BepInEx/config/RunSaves/save.json`, and the one before it is kept as `save.prev.json`.
 
