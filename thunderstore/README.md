@@ -50,6 +50,7 @@ Players are matched by their Steam/Epic account. Someone on a different account 
 | Saving | SaveKey | (empty) | Optional key to save, e.g. F5. |
 | Restoring | LobbyPrompt | true | Show the saved run in the lobby. |
 | Restoring | LobbyPanelSide | Right | Which side of the lobby the panel sits on (Right / Left). |
+| Restoring | PanelKey | F10 | Show or hide the panel. Hide also leaves a small "Saved Run" tab to click. |
 
 The save is stored in `BepInEx/config/RunSaves/save.json`, and the one before it is kept as `save.prev.json`.
 

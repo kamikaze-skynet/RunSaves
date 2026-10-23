@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.2
+- Fix: once hidden, the lobby's saved-run panel couldn't be brought back. Hide now folds it into a small "Saved Run" tab on the same side; click it (or press F10, setting `PanelKey`) to open it again.
+
 ## 1.2.1
 - Saves are written to disk in the background, so the game never waits for the disk while saving.
 

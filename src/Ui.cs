@@ -214,12 +214,12 @@ public class RunSavesUI : MonoBehaviour
 {
     public RunSavesUI(IntPtr ptr) : base(ptr) { }
 
-    private GameObject canvas, panel;
+    private GameObject canvas, panel, tab;
     private TextMeshProUGUI title, body, status;
     private TextMeshProUGUI resumeLabel, deleteLabel, hideLabel;
     private bool hidden, inMenu;
     private float nextScan, deleteConfirmUntil, nextErrorLog;
-    private static UnityAction resumeAct, deleteAct, hideAct;
+    private static UnityAction resumeAct, deleteAct, hideAct, showAct;
     private static RunSavesUI instance;
 
     private void Update()
@@ -244,17 +244,22 @@ public class RunSavesUI : MonoBehaviour
             nextScan = Time.unscaledTime + 0.5f;
             Step("menu check", () =>
             {
-                bool menu = Game.InMainMenu();
-                if (!menu && inMenu) hidden = false; // show again next time we're back in the lobby
-                inMenu = menu;
+                inMenu = Game.InMainMenu();
             });
         }
 
-        bool show = inMenu && !hidden && Plugin.Enabled.Value && Plugin.ShowLobbyPrompt.Value && !Game.IsClientOnly
-                    && (SaveStore.Exists || Restorer.Armed != null);
-        if (show && panel == null) Step("build", Build);
-        if (canvas != null && canvas.activeSelf != show) Step("show/hide", () => canvas.SetActive(show));
-        if (show && panel != null && Time.frameCount % 15 == 0) Step("refresh", Refresh);
+        // Available in the lobby when there's a save. Hidden = folded into a small "Saved Run" tab on the same side.
+        bool available = inMenu && Plugin.Enabled.Value && Plugin.ShowLobbyPrompt.Value && !Game.IsClientOnly
+                         && (SaveStore.Exists || Restorer.Armed != null);
+        if (available) Step("panel key", () => { if (UiKit.Pressed(Plugin.PanelKey.Value)) hidden = !hidden; });
+        if (available && panel == null) Step("build", Build);
+        if (canvas != null && canvas.activeSelf != available) Step("show/hide", () => canvas.SetActive(available));
+        if (available && panel != null)
+        {
+            if (panel.activeSelf == hidden) panel.SetActive(!hidden);
+            if (tab != null && tab.activeSelf != hidden) tab.SetActive(hidden);
+            if (!hidden && Time.frameCount % 15 == 0) Step("refresh", Refresh);
+        }
     }
 
     private void Step(string what, Action action)
@@ -295,6 +300,16 @@ public class RunSavesUI : MonoBehaviour
         resumeLabel = UiKit.Button("Resume", panel.transform, font, "Resume", new Vector2(0f, -50f), new Vector2(360f, 48f), resumeAct, new Color(0.2f, 0.55f, 0.3f, 0.95f)).label;
         deleteLabel = UiKit.Button("Delete", panel.transform, font, "Delete", new Vector2(0f, -110f), new Vector2(360f, 48f), deleteAct, new Color(0.55f, 0.2f, 0.2f, 0.95f)).label;
         hideLabel = UiKit.Button("Hide", panel.transform, font, "Hide", new Vector2(0f, -170f), new Vector2(360f, 48f), hideAct, new Color(0.35f, 0.22f, 0.6f, 0.95f)).label;
+
+        // The tab that brings the panel back after Hide (same side, same height).
+        showAct ??= DelegateSupport.ConvertDelegate<UnityAction>(new Action(() => instance?.OnShow()));
+        var (tabButton, tabLabel) = UiKit.Button("ShowTab", canvas.transform, font, "Saved Run", Vector2.zero, new Vector2(170f, 46f), showAct, new Color(0.35f, 0.22f, 0.6f, 0.95f));
+        tab = tabButton.gameObject;
+        var trt = tab.GetComponent<RectTransform>();
+        trt.anchorMin = trt.anchorMax = trt.pivot = new Vector2(left ? 0f : 1f, 0.5f);
+        trt.anchoredPosition = new Vector2(left ? 190f : -28f, 20f);
+        tabLabel.fontSize = 20f;
+        tab.SetActive(hidden);
         Refresh();
     }
 
@@ -350,9 +365,7 @@ public class RunSavesUI : MonoBehaviour
         Plugin.Log.LogInfo("Saved run deleted from the lobby.");
     }
 
-    private void OnHide()
-    {
-        hidden = true;
-        if (canvas != null) canvas.SetActive(false);
-    }
+    private void OnHide() => hidden = true;   // folds into the tab
+
+    private void OnShow() => hidden = false;
 }
