@@ -90,7 +90,7 @@ internal static class Recorder
         ResetForNewRun();
     }
 
-    [HarmonyPatch(typeof(RunManager), nameof(RunManager.OnNetworkDespawn))]
+    [HarmonyPatch(typeof(RunManager), nameof(RunManager.OnDestroy))] // RunManager has no OnNetworkDespawn of its own
     [HarmonyPostfix]
     private static void RunDespawned()
     {
