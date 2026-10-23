@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.1
+- Saves are written to disk in the background, so the game never waits for the disk while saving.
+
 ## 1.2.0
 - Artifact stacks are saved and restored: artifacts that grow during a run (per revive, per objective, per health pickup, per infusion, per common upgrade) keep their stacks. Revives performed are kept too.
 - Saves when the host quits the run from the pause menu, and quietly every 60 seconds (`AutosaveIntervalSeconds`), so quitting mid-wave keeps the upgrades and levels from that wave. A restore still starts at the beginning of the saved wave.

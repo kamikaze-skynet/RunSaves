@@ -51,8 +51,8 @@ internal static class Saver
         // Background save every AutosaveIntervalSeconds, so quitting or a crash mid-wave keeps the upgrades
         // and levels gained since the wave started (a restore still starts at the beginning of that wave).
         int interval = Plugin.AutosaveIntervalSeconds.Value;
-        if (interval > 0 && Recorder.RunActive && !Restorer.Busy && !Game.StoreBusy
-            && UnityEngine.Time.unscaledTime - lastSaveAt >= interval && Saver.CanSave(out _))
+        if (interval > 0 && UnityEngine.Time.unscaledTime - lastSaveAt >= interval
+            && Recorder.RunActive && !Restorer.Busy && !Game.StoreBusy && Saver.CanSave(out _))
         {
             lastSaveAt = UnityEngine.Time.unscaledTime;
             if (Save("auto", out _)) OwnsSave = true;

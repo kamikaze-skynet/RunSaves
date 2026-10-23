@@ -94,16 +94,51 @@ internal static class SaveStore
 
     internal static bool Exists => File.Exists(FilePath);
 
+    private static readonly object writeLock = new();
+    private static string pendingJson;      // newest save waiting to be written
+    private static bool writerRunning;
+
+    /// <summary>
+    /// Saves to disk on a background thread, so the game never waits for the disk. The data is gathered and turned
+    /// into JSON here (on the game's thread, ~1 ms); only the file writing happens in the background. If saves come
+    /// quicker than the disk, only the newest is written.
+    /// </summary>
     internal static void Write(RunSave save)
     {
-        Directory.CreateDirectory(Dir);
-        string tmp = FilePath + ".tmp";
-        File.WriteAllText(tmp, JsonSerializer.Serialize(save, Options));
-        if (File.Exists(FilePath)) File.Copy(FilePath, PrevPath, true);
-        File.Copy(tmp, FilePath, true);
-        File.Delete(tmp);
+        string json = JsonSerializer.Serialize(save, Options);
         cached = save;
-        cachedStamp = File.GetLastWriteTimeUtc(FilePath);
+        cachedStamp = DateTime.MaxValue; // the file on disk may lag behind for a moment; keep using this copy
+        lock (writeLock)
+        {
+            pendingJson = json;
+            if (writerRunning) return;
+            writerRunning = true;
+        }
+        System.Threading.Tasks.Task.Run(WriterLoop);
+    }
+
+    private static void WriterLoop()
+    {
+        while (true)
+        {
+            string json;
+            lock (writeLock)
+            {
+                json = pendingJson;
+                pendingJson = null;
+                if (json == null) { writerRunning = false; return; }
+            }
+            try
+            {
+                Directory.CreateDirectory(Dir);
+                string tmp = FilePath + ".tmp";
+                File.WriteAllText(tmp, json);
+                if (File.Exists(FilePath)) File.Copy(FilePath, PrevPath, true);
+                File.Copy(tmp, FilePath, true);
+                File.Delete(tmp);
+            }
+            catch (Exception ex) { Plugin.Log.LogError($"Writing the save failed: {ex.Message}"); }
+        }
     }
 
     internal static RunSave Read()
@@ -112,7 +147,7 @@ internal static class SaveStore
         {
             if (!File.Exists(FilePath)) { cached = null; return null; }
             var stamp = File.GetLastWriteTimeUtc(FilePath);
-            if (cached != null && stamp == cachedStamp) return cached;
+            if (cached != null && (stamp == cachedStamp || cachedStamp == DateTime.MaxValue)) return cached;
             cached = JsonSerializer.Deserialize<RunSave>(File.ReadAllText(FilePath));
             cachedStamp = stamp;
             return cached;
@@ -126,6 +161,7 @@ internal static class SaveStore
 
     internal static void Delete()
     {
+        lock (writeLock) pendingJson = null; // a save still waiting to be written mustn't bring it back
         try
         {
             if (File.Exists(FilePath))
