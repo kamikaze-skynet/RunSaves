@@ -1,3 +1,6 @@
+## 1.3.2
+- Fixed the check that keeps RunSaves' catch-up shops from overlapping with MoreSpellSlots' owed-spell shops.
+
 ## 1.3.1
 - With MoreSpellSlots installed, catch-up spells come from its owed-spell shops instead of RunSaves', so nobody gets spells twice. Only one player-only shop opens at a time.
 

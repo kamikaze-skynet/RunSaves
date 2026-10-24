@@ -63,16 +63,16 @@ internal static class CatchUp
 
     // Shared with MoreSpellSlots: only one mod opens a player-only shop at a time.
     private const string SpecialStoreFlag = "girthy_mods.SpecialStore";
-    private static GameObject flag;
-
+    // GameObject.Find is broken in this game build (its string marshalling is missing), so the flag is shared
+    // through the .NET AppDomain instead (both mods run in the same one).
     private static void SetFlag(bool on)
     {
-        try
-        {
-            if (on && !Game.Alive(flag)) { flag = new GameObject(SpecialStoreFlag); UObject.DontDestroyOnLoad(flag); }
-            else if (!on && Game.Alive(flag)) { UObject.Destroy(flag); flag = null; }
-        }
-        catch { }
+        try { AppDomain.CurrentDomain.SetData(SpecialStoreFlag, on ? (object)Time.realtimeSinceStartup : null); } catch { }
+    }
+
+    private static bool FlagSet()
+    {
+        try { return AppDomain.CurrentDomain.GetData(SpecialStoreFlag) is float t && Time.realtimeSinceStartup - t < 180f; } catch { return false; } // stale after 3 min
     }
 
     internal static void Reset()
@@ -150,7 +150,7 @@ internal static class CatchUp
             return;
         }
         if (queue.Count == 0 || Game.StoreBusy || Time.timeScale <= 0.01f) return;
-        if (GameObject.Find(SpecialStoreFlag) != null) return; // MoreSpellSlots' owed-spell shop is running
+        if (FlagSet()) return; // MoreSpellSlots' owed-spell shop is running
 
         var next = queue.Dequeue();
         if (Game.PlayerFor(next.Target) == null) { Plugin.Log.LogInfo($"Catch-up: {next.Name} left; skipping their picks."); DropTarget(next.Target); return; }
