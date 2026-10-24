@@ -1,3 +1,10 @@
+## 1.4.0
+- **Drop-in joining (experimental).** Friends can join a run that's already going, from a Steam invite or "Join game", without waiting for the next run. Their game loads the realm and gets caught up on everyone else (who they are, their upgrades, the party level), then their wizard appears next to the others.
+  - A new player then gets catch-up picks in the paused catch-up session (spells, artifacts, upgrades).
+  - Someone who was in this run before (crashed or left) gets their old build back instead.
+  - The lobby stays joinable during the run and isn't shown as "game in progress". It still isn't listed for matchmaking. The player cap (MoreWizards' `MaxPlayers`, or 4) still applies.
+  - Everyone needs RunSaves 1.4.0. New setting `[Drop-in] Enabled` (on).
+
 ## 1.3.4
 - **Everyone uses the host's settings.** While you're in someone's game, this mod reads the host's config instead of yours, from the lobby on. Your own messages, the save button and key, and the lobby panel stay yours. Your config file isn't changed, and your own values are back when you leave. If the host doesn't have the mod, it stays off for you in that game.
 

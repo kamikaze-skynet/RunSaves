@@ -314,44 +314,7 @@ internal static class Restorer
         Recorder.Suppress = true;
         try
         {
-            switch (imp.Kind)
-            {
-                case "Stats":
-                {
-                    var list = new List<StatModifierMessage>();
-                    foreach (var e in imp.Stats ?? new List<StatEntry>())
-                        if (Enum.TryParse(e.Stat, out StatType st) && Enum.TryParse(e.Type, out StatModifiersType ty))
-                            list.Add(new StatModifierMessage { Stat = st, Value = e.Value, Type = ty });
-                    if (list.Count == 0) { skipped++; return; }
-                    var arr = new Il2CppReferenceArray<StatModifierMessage>(list.Count);
-                    for (int i = 0; i < list.Count; i++) arr[i] = list[i];
-                    im.SendCharacterStatModifiersRpc(client, arr);
-                    break;
-                }
-                case "SpellStat":
-                    if (!Enum.TryParse(imp.Spell, out SpellType sp1) || !Enum.TryParse(imp.Stat, out StatType st1)) { skipped++; return; }
-                    im.SendSpellStatModifierRpc(client, new SpellStatModifierMessage { Spell = sp1, Stat = st1, Value = imp.Value });
-                    break;
-                case "Infusion":
-                    if (!Enum.TryParse(imp.Spell, out SpellType sp2) || !Enum.TryParse(imp.Element, out ElementType el)) { skipped++; return; }
-                    im.SendSpellInfusionRpc(client, new SpellInfusionMessage { Spell = sp2, Element = el });
-                    break;
-                case "Variant":
-                    if (!Enum.TryParse(imp.Spell, out SpellType sp3) || !Enum.TryParse(imp.Variant, out SpellVariant va)) { skipped++; return; }
-                    im.SendSpellVariantRpc(client, new SpellVariantMessage { Spell = sp3, SpellVariant = va });
-                    break;
-                case "Artifact":
-                    if (!Enum.TryParse(imp.Artifact, out ArtifactType ar)) { skipped++; return; }
-                    im.SendArtifactRpc(client, new ArtifactMessage { Artifact = ar });
-                    break;
-                case "Final":
-                    if (!Enum.TryParse(imp.Final, out FinalUpgradeType fu)) { skipped++; return; }
-                    im.SendFinalUpgradeRpc(client, fu);
-                    break;
-                default:
-                    skipped++;
-                    return;
-            }
+            if (!Upgrades.Send(im, client, imp)) { skipped++; return; }
             applied++;
             Recorder.Add(Game.KeyOf(p), imp); // the restored run's own record, so later saves stay complete
         }

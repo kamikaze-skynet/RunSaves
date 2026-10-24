@@ -235,6 +235,7 @@ public class RunSavesUI : MonoBehaviour
         Step("client spells", Net.TryEquipPending);
         Step("toast", Toast.Tick);
         Step("catch-up", CatchUp.Tick);
+        Step("drop-in", DropIn.Tick);
         Step("pause", PauseButton.Tick);
         Step("save key", () =>
         {

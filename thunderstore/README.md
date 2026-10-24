@@ -60,15 +60,30 @@ Works with MoreWizards, StarterSpells, TripleInfusion, ReviveRegen and BetterNet
 
 Saves remember the realm, the threat level (difficulty), and the Harmony, Eternity and single-spell modifiers. When the host presses **Resume** in the lobby, the lobby is switched to those settings.
 
+## Drop-in joining (experimental)
+
+Friends can join a run that's already going, from a Steam invite or "Join game". Normally the game turns joining off once a run starts; with this on, the lobby stays joinable (but not listed for matchmaking) and the host lets them in.
+
+- Their game loads the realm and is caught up on the others: who each player is, everyone's upgrades, the party level and revives.
+- Their wizard appears next to another player.
+- A new player then gets catch-up picks (below). Someone who was in this run before and dropped out gets their old build back instead.
+- The player cap still applies (MoreWizards' `MaxPlayers`, or the game's 4).
+
+Everyone needs RunSaves for this. Turn it off with `[Drop-in] Enabled`.
+
 ## Catch-up for new players
 
-If someone joins a restored run and the save has no build for them, they get catch-up shops right after the restore. The party level is shared, so they're already at the party's level; the shops give them a build to match:
+If someone joins a restored run and the save has no build for them, or drops into a run in progress, they get catch-up shops. The party level is shared, so they're already at the party's level; the shops give them a build to match:
 
 - **Spells** until they have as many as the others.
 - **Artifacts**, about as many as the others have.
 - **Upgrades**, up to `UpgradePicks` (15) of them. Each pick is applied several times, so the total matches the levels they missed. For example, joining at level 110 means 15 picks that each count about 7 times.
 
 The game stays paused for everyone from the first catch-up shop to the last, so nobody fights while the new player builds up. Only the new player can pick in these shops; everyone else sees "waiting for other players". There is no countdown or kick, and the game resumes on its own when they're done.
+
+| `[Drop-in]` setting | Default | What it does |
+|---|---|---|
+| `Enabled` | `true` | Host: let friends join a run that's already going. |
 
 | `[Catch-up]` setting | Default | What it does |
 |---|---|---|

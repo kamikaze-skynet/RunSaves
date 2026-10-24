@@ -22,7 +22,7 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.RunSaves";
     public const string Name = "RunSaves";
-    public const string Version = "1.3.4";
+    public const string Version = "1.4.0";
 
     internal static new ManualLogSource Log;
 
@@ -39,6 +39,7 @@ public class Plugin : BasePlugin
     internal static ConfigEntry<bool> CatchUpEnabled;
     internal static ConfigEntry<int> CatchUpPicks;
     internal static ConfigEntry<bool> CatchUpArtifacts;
+    internal static ConfigEntry<bool> DropInEnabled;
 
     public override void Load()
     {
@@ -74,6 +75,9 @@ public class Plugin : BasePlugin
             new ConfigDescription("Most upgrade picks a new player gets. Each pick counts as several level-ups so the total matches the levels they missed.", new AcceptableValueRange<int>(1, 100)));
         CatchUpArtifacts = Config.Bind("Catch-up", "Artifacts", true, "Also give artifact picks (about as many as the others have).");
 
+        DropInEnabled = Config.Bind("Drop-in", "Enabled", true,
+            "Host: friends can join a run that's already going. They get their wizard next to the others, then catch-up picks (or their old build back if they were in this run before). Everyone needs RunSaves.");
+
         var harmony = new Harmony(Guid);
         harmony.PatchAll(typeof(Recorder));
         harmony.PatchAll(typeof(Saver));
@@ -82,6 +86,8 @@ public class Plugin : BasePlugin
         harmony.PatchAll(typeof(PauseButton));
         harmony.PatchAll(typeof(Setup));
         harmony.PatchAll(typeof(CatchUp));
+        try { harmony.PatchAll(typeof(DropIn)); }
+        catch (System.Exception ex) { Log.LogError($"Drop-in joining couldn't be set up: {ex.Message}"); }
         AddComponent<RunSavesUI>();
 
         Log.LogInfo($"{Name} {Version} ready.");
