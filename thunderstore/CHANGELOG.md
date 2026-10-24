@@ -1,3 +1,11 @@
+## 1.3.0
+- **Run setup is saved.** Saves now store the threat level (difficulty), Harmony (peaceful mode), Eternity (endless mode) and single-spell mode along with the realm. Pressing **Resume** in the lobby sets all of them for you, and the saved-run panel shows the difficulty.
+- **Catch-up picks for new players.** Someone who joins a restored run without a build in the save gets shops that only they pick from, until they match the party:
+  - spell shops until they have as many spells as the others,
+  - artifact shops (about as many as the others have),
+  - up to 15 upgrade picks, where each pick counts as several level-ups so the total matches the levels they missed.
+  Everyone else's shop shows "waiting for other players" while this happens. There's no countdown or kick during catch-up shops. Settings are in `[Catch-up]`.
+
 # Changelog
 
 ## 1.2.2

@@ -90,6 +90,7 @@ internal static class Recorder
     {
         Game.ForgetObjects();
         ResetForNewRun();
+        CatchUp.Reset();
     }
 
     [HarmonyPatch(typeof(RunManager), nameof(RunManager.OnDestroy))] // RunManager has no OnNetworkDespawn of its own
@@ -122,6 +123,8 @@ internal static class Recorder
     [HarmonyPrefix]
     private static void Stats(ImprovementsManager __instance, ulong clientId, Il2CppReferenceArray<StatModifierMessage> messages)
     {
+        if (messages != null && Game.IsServer && Executing(__instance))
+            CatchUp.OnUpgradePicked(clientId, () => __instance.SendCharacterStatModifiersRpc(clientId, messages));
         if (!ShouldRecord(__instance) || messages == null) return;
         try
         {
@@ -138,6 +141,8 @@ internal static class Recorder
     [HarmonyPrefix]
     private static void SpellStat(ImprovementsManager __instance, ulong clientId, SpellStatModifierMessage message)
     {
+        if (message != null && Game.IsServer && Executing(__instance))
+            CatchUp.OnUpgradePicked(clientId, () => __instance.SendSpellStatModifierRpc(clientId, message));
         if (!ShouldRecord(__instance) || message == null) return;
         try { Add(KeyFor(clientId), new Improvement { Kind = "SpellStat", Spell = message.Spell.ToString(), Stat = message.Stat.ToString(), Value = message.Value }); }
         catch (Exception ex) { Plugin.Log.LogError($"Record spell upgrade: {ex}"); }

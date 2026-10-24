@@ -58,12 +58,16 @@ public class RunSave
     public float PartyExperience { get; set; }
     public int Revives { get; set; }
     public int CurseLevel { get; set; }
+    public string WorldId { get; set; }        // the lobby's World value (enum name)
+    public string Difficulty { get; set; }     // threat level (enum name)
+    public List<string> Modifiers { get; set; } // enabled modifiers, "EndlessMode:1"
     public List<SavedPlayer> Players { get; set; } = new();
 
     public string Summary()
     {
         string players = Players.Count == 0 ? "no players" : string.Join(", ", Players.ConvertAll(p => $"{p.Name} ({Pretty(p.Character)})"));
-        return $"{World}  -  Wave {Wave}/{WaveCount}{(Cycle > 1 ? $" (loop {Cycle})" : "")}  -  Level {PartyLevel}\n{players}";
+        string diff = string.IsNullOrEmpty(Difficulty) ? "" : $"  -  {Pretty(Difficulty)}";
+        return $"{World}{diff}  -  Wave {Wave}/{WaveCount}{(Cycle > 1 ? $" (loop {Cycle})" : "")}  -  Level {PartyLevel}\n{players}";
     }
 
     internal static string Pretty(string enumName)

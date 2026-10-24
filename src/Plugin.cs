@@ -22,7 +22,7 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.RunSaves";
     public const string Name = "RunSaves";
-    public const string Version = "1.2.2";
+    public const string Version = "1.3.0";
 
     internal static new ManualLogSource Log;
 
@@ -36,6 +36,9 @@ public class Plugin : BasePlugin
     internal static ConfigEntry<bool> ShowLobbyPrompt;
     internal static ConfigEntry<string> LobbyPanelSide;
     internal static ConfigEntry<string> PanelKey;
+    internal static ConfigEntry<bool> CatchUpEnabled;
+    internal static ConfigEntry<int> CatchUpPicks;
+    internal static ConfigEntry<bool> CatchUpArtifacts;
 
     public override void Load()
     {
@@ -64,12 +67,20 @@ public class Plugin : BasePlugin
         PanelKey = Config.Bind("Restoring", "PanelKey", "F10",
             "Key to show or hide the saved-run panel in the lobby (Unity Input System key name). Hide also leaves a small \"Saved Run\" tab to click.");
 
+        CatchUpEnabled = Config.Bind("Catch-up", "Enabled", true,
+            "Host: players who join a restored run without a build in the save get catch-up shops (only they pick) to match the party: spells, artifacts and upgrades.");
+        CatchUpPicks = Config.Bind("Catch-up", "UpgradePicks", 15,
+            new ConfigDescription("Most upgrade picks a new player gets. Each pick counts as several level-ups so the total matches the levels they missed.", new AcceptableValueRange<int>(1, 100)));
+        CatchUpArtifacts = Config.Bind("Catch-up", "Artifacts", true, "Also give artifact picks (about as many as the others have).");
+
         var harmony = new Harmony(Guid);
         harmony.PatchAll(typeof(Recorder));
         harmony.PatchAll(typeof(Saver));
         harmony.PatchAll(typeof(Restorer));
         harmony.PatchAll(typeof(Net));
         harmony.PatchAll(typeof(PauseButton));
+        harmony.PatchAll(typeof(Setup));
+        harmony.PatchAll(typeof(CatchUp));
         AddComponent<RunSavesUI>();
 
         Log.LogInfo($"{Name} {Version} ready.");

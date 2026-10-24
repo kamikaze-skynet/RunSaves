@@ -105,6 +105,11 @@ internal static class Saver
             var players = Game.Players();
             foreach (var p in players) Recorder.Remember(p);
             try { var host = Game.LocalPlayer(); if (host != null) save.CurseLevel = host.ActiveCurseLevel; } catch { }
+            if (!string.IsNullOrEmpty(Setup.Difficulty)) Setup.FillSave(save);
+            else if (Restorer.LastRestored != null) // a restored run started before setup recording existed: keep the save's
+            {
+                save.WorldId = Restorer.LastRestored.WorldId; save.Difficulty = Restorer.LastRestored.Difficulty; save.Modifiers = Restorer.LastRestored.Modifiers;
+            }
 
             var keys = new List<string>();
             foreach (var p in players) { var k = Game.KeyOf(p); if (!keys.Contains(k)) keys.Add(k); }

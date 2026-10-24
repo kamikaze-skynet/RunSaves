@@ -23,7 +23,9 @@ namespace RunSaves;
 internal static class Restorer
 {
     internal static RunSave Armed;        // chosen in the lobby, waiting for a run to start
+    internal static RunSave LastRestored; // the save this run was restored from (its setup is carried into new saves)
     private static RunSave active;        // being restored now
+    private static readonly List<GameplayPlayerIdentity> fresh = new(); // players the save has no build for
     internal static bool Busy => active != null;
 
     private enum Phase { None, WaitPlayers, WaitSpells, Settle, Replay, Finish }
@@ -89,6 +91,7 @@ internal static class Restorer
             catch { }
 
             active = save;
+            LastRestored = save;
             wavesJumped = false;
             if (save.Cycle > 1 && __instance.CycleNumber != null && __instance.CycleNumber.Value < save.Cycle)
                 __instance.CycleNumber.Value = save.Cycle;
@@ -217,6 +220,7 @@ internal static class Restorer
     {
         matches.Clear();
         notes.Clear();
+        fresh.Clear();
         var unused = new List<SavedPlayer>(active.Players);
         var waiting = new List<GameplayPlayerIdentity>();
 
@@ -243,7 +247,7 @@ internal static class Restorer
                 matches.Add(new Match { Player = p, Saved = sp });
                 notes.Add($"{Game.NameOf(p)} gets {sp.Name}'s build (same wizard)");
             }
-            else notes.Add($"{Game.NameOf(p)} isn't in the save (starts fresh)");
+            else { notes.Add($"{Game.NameOf(p)} isn't in the save (gets catch-up picks)"); fresh.Add(p); }
         }
         foreach (var sp in unused)
         {
@@ -419,6 +423,9 @@ internal static class Restorer
             }
 
             foreach (var m in matches) Recorder.Remember(m.Player);
+
+            try { CatchUp.Plan(new List<GameplayPlayerIdentity>(fresh), matches.ConvertAll(m => m.Player), Recorder.Log); }
+            catch (Exception ex) { Plugin.Log.LogError($"Catch-up plan: {ex}"); }
         }
         catch (Exception ex) { Plugin.Log.LogError($"Restore (level/revives): {ex}"); }
 

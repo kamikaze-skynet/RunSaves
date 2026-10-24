@@ -229,6 +229,7 @@ public class RunSavesUI : MonoBehaviour
         Step("autosave", Saver.Tick);
         Step("client spells", Net.TryEquipPending);
         Step("toast", Toast.Tick);
+        Step("catch-up", CatchUp.Tick);
         Step("pause", PauseButton.Tick);
         Step("save key", () =>
         {
@@ -323,7 +324,8 @@ public class RunSavesUI : MonoBehaviour
         if (armed != null)
         {
             title.text = "RESUMING ON NEXT RUN";
-            body.text = $"Start a run in <b>{save.World}</b> to continue at wave {save.Wave}.\nPlayers in the save: {string.Join(", ", save.Players.ConvertAll(p => p.Name))}";
+            string diff = string.IsNullOrEmpty(save.Difficulty) ? "" : $" on <b>{RunSave.Pretty(save.Difficulty)}</b>";
+            body.text = $"Start a run in <b>{save.World}</b>{diff} to continue at wave {save.Wave}.\nPlayers in the save: {string.Join(", ", save.Players.ConvertAll(p => p.Name))}";
             status.text = "Everyone should join and pick the same wizards before you start. Everyone needs RunSaves.";
             resumeLabel.text = "Cancel";
         }
@@ -349,7 +351,9 @@ public class RunSavesUI : MonoBehaviour
             var save = SaveStore.Read();
             if (save == null) { Toast.Show("The save file couldn't be read.", 4f); return; }
             Restorer.Armed = save;
-            Toast.Show($"Start a run in {save.World} to continue the saved run.", 5f);
+            string applied = "";
+            try { applied = Setup.ApplyToLobby(save); } catch (Exception ex) { Plugin.Log.LogWarning($"Run setup: {ex.Message}"); }
+            Toast.Show(applied.Length > 0 ? $"Lobby set to the save: {applied}. Start the run to continue." : $"Start a run in {save.World} to continue the saved run.", 6f);
             Plugin.Log.LogInfo($"Resume armed: {save.World}, wave {save.Wave}.");
         }
         Refresh();

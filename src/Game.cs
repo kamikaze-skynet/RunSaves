@@ -48,6 +48,13 @@ internal static class Game
         run = null; party = null; revives = null; improvements = null; store = null;
     }
 
+    internal static bool Alive(UObject o) => o is not null && !o.WasCollected && o != null;
+
+    internal static ulong LocalClientId()
+    {
+        try { var nm = NetworkManager.Singleton; return nm != null ? nm.LocalClientId : ulong.MaxValue; } catch { return ulong.MaxValue; }
+    }
+
     internal static bool IsServer
     {
         get { try { var nm = NetworkManager.Singleton; return nm != null && nm.IsListening && nm.IsServer; } catch { return false; } }

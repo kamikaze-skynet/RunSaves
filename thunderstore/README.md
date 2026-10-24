@@ -55,3 +55,23 @@ Players are matched by their Steam/Epic account. Someone on a different account 
 The save is stored in `BepInEx/config/RunSaves/save.json`, and the one before it is kept as `save.prev.json`.
 
 Works with MoreWizards, StarterSpells, TripleInfusion, ReviveRegen and BetterNetcode.
+
+## Run setup
+
+Saves remember the realm, the threat level (difficulty), and the Harmony, Eternity and single-spell modifiers. When the host presses **Resume** in the lobby, the lobby is switched to those settings.
+
+## Catch-up for new players
+
+If someone joins a restored run and the save has no build for them, they get catch-up shops right after the restore. The party level is shared, so they're already at the party's level; the shops give them a build to match:
+
+- **Spells** until they have as many as the others.
+- **Artifacts**, about as many as the others have.
+- **Upgrades**, up to `UpgradePicks` (15) of them. Each pick is applied several times, so the total matches the levels they missed. For example, joining at level 110 means 15 picks that each count about 7 times.
+
+Only the new player can pick in these shops; everyone else waits. There is no countdown or kick.
+
+| `[Catch-up]` setting | Default | What it does |
+|---|---|---|
+| `Enabled` | `true` | Turns catch-up shops on or off. |
+| `UpgradePicks` | `15` | The most upgrade picks a new player gets. |
+| `Artifacts` | `true` | Also gives them artifact picks. |
