@@ -222,6 +222,11 @@ public class RunSavesUI : MonoBehaviour
     private static UnityAction resumeAct, deleteAct, hideAct, showAct;
     private static RunSavesUI instance;
 
+    private void LateUpdate()
+    {
+        try { CatchUp.EnforcePause(); } catch { }
+    }
+
     private void Update()
     {
         instance = this;

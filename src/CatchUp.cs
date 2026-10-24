@@ -78,6 +78,8 @@ internal static class CatchUp
     internal static void Reset()
     {
         SetFlag(false);
+        hostSession = false;
+        if (pausedFor != null) SetPaused(null);
         queue.Clear();
         hostCurrent = null;
         repeats.Clear();
@@ -99,16 +101,13 @@ internal static class CatchUp
             targetSpells = Math.Max(targetSpells, Game.SpellsOf(p).Count);
             if (builds.TryGetValue(Game.KeyOf(p), out var log)) { artifacts += log.FindAll(i => i.Kind == "Artifact").Count; counted++; }
         }
-        bool moreSpellSlots = false;
-        try { moreSpellSlots = BepInEx.Unity.IL2CPP.IL2CPPChainloader.Instance.Plugins.ContainsKey("girthy_mods.MoreSpellSlots"); } catch { }
         int artifactPicks = counted > 0 && Plugin.CatchUpArtifacts.Value ? (int)Math.Round((double)artifacts / counted) : 0;
 
         foreach (var p in fresh)
         {
             if (!Game.Alive(p)) continue;
             string name = Game.NameOf(p);
-            // MoreSpellSlots gives owed spell shops by itself (to everyone short of spells); don't double them.
-            int spells = moreSpellSlots ? 0 : Math.Max(0, targetSpells - Game.SpellsOf(p).Count);
+            int spells = Math.Max(0, targetSpells - Game.SpellsOf(p).Count);
             int upgradeLevels = Math.Max(0, level - 1 - (targetSpells - 1));
             int picks = Math.Min(upgradeLevels, Math.Max(1, Plugin.CatchUpPicks.Value));
             int mult = picks > 0 ? (int)Math.Ceiling((double)upgradeLevels / picks) : 1;
@@ -122,7 +121,60 @@ internal static class CatchUp
             Plugin.Log.LogInfo($"Catch-up for {name}: {spells} spells, {artifactPicks} artifacts, {picks} upgrades x{mult} (party level {level}).");
             Toast.Show($"{name} gets {total} catch-up picks to match the party.", 6f);
         }
+        if (queue.Count > 0) StartSession();
     }
+
+    // ---------- the pause around a catch-up session ----------
+    // Everyone's game stays paused from the first catch-up shop to the last (the shops themselves pause the game,
+    // but it would run between them). The game's shop queue waits in real time, so shops still open while paused.
+
+    private static bool hostSession;
+    private static string pausedFor;            // every game: the session's player names, null when not paused
+    private static bool forcedPause;
+
+    private static void StartSession()
+    {
+        hostSession = true;
+        SetFlag(true);
+        var names = new List<string>();
+        foreach (var p in queue) if (!names.Contains(p.Name)) names.Add(p.Name);
+        string who = string.Join(", ", names);
+        Plugin.Log.LogInfo($"Catch-up: game paused while {who} pick ({queue.Count} shops).");
+        localSessionSince = Time.unscaledTime;
+        SendRaw("pause|" + who.Replace("|", "/"));
+        SetPaused(who);
+    }
+
+    private static void EndSession()
+    {
+        hostSession = false;
+        SetFlag(false);
+        Plugin.Log.LogInfo("Catch-up done; game resumed.");
+        SendRaw("resume");
+        SetPaused(null);
+    }
+
+    private static void SetPaused(string who)
+    {
+        pausedFor = who;
+        if (who != null) Toast.Show($"Paused: {who} is catching up. The game resumes when they're done.", 6f);
+        else
+        {
+            if (forcedPause) { Time.timeScale = 1f; forcedPause = false; }
+            Toast.Show("Catch-up done. Resuming!", 3f);
+        }
+    }
+
+    /// <summary>Every game, late in the frame (after the shop's own time-scale changes).</summary>
+    internal static void EnforcePause()
+    {
+        if (hostSession) SetFlag(true); // keep MoreSpellSlots' owed-spell check waiting for the whole session
+        if (pausedFor == null) return;
+        if (Time.unscaledTime - localSessionSince > 900f) { SetPaused(null); return; } // safety: 15 min
+        if (Time.timeScale != 0f) { Time.timeScale = 0f; forcedPause = true; }
+    }
+
+    private static float localSessionSince;
 
     /// <summary>Host and clients, every frame.</summary>
     internal static void Tick()
@@ -146,21 +198,24 @@ internal static class CatchUp
         {
             bool open = Game.StoreBusy;
             if (open) storeSeenOpen = true;
-            else if (storeSeenOpen || Time.unscaledTime - offeredAt > 20f) { hostCurrent = null; SetFlag(false); Announce(null); }
+            else if (storeSeenOpen || Time.unscaledTime - offeredAt > 20f) { hostCurrent = null; Announce(null); }
             return;
         }
-        if (queue.Count == 0 || Game.StoreBusy || Time.timeScale <= 0.01f) return;
-        if (FlagSet()) return; // MoreSpellSlots' owed-spell shop is running
+        if (queue.Count == 0)
+        {
+            if (hostSession && !Game.StoreBusy) EndSession();
+            return;
+        }
+        if (Game.StoreBusy) return;
 
         var next = queue.Dequeue();
         if (Game.PlayerFor(next.Target) == null) { Plugin.Log.LogInfo($"Catch-up: {next.Name} left; skipping their picks."); DropTarget(next.Target); return; }
         hostCurrent = next;
-        SetFlag(true);
         storeSeenOpen = false;
         offeredAt = Time.unscaledTime;
         Announce(next);
         try { store.OfferStoreToAllPlayers(next.Kind == Kind.Artifact ? StoreType.Artifact : StoreType.LevelUp); }
-        catch (Exception ex) { Plugin.Log.LogError($"Catch-up shop: {ex}"); hostCurrent = null; SetFlag(false); Announce(null); }
+        catch (Exception ex) { Plugin.Log.LogError($"Catch-up shop: {ex}"); hostCurrent = null; Announce(null); }
     }
 
     private static void DropTarget(ulong target)
@@ -184,11 +239,11 @@ internal static class CatchUp
     // No countdown or kick for a catch-up shop (the new player may take their time).
     [HarmonyPatch(typeof(StoreManager), nameof(StoreManager.StartCountdown))]
     [HarmonyPrefix]
-    private static bool StartCountdown_Prefix() => hostCurrent == null && local == null;
+    private static bool StartCountdown_Prefix() => hostCurrent == null && local == null && pausedFor == null;
 
     [HarmonyPatch(typeof(StoreManager), nameof(StoreManager.KickPlayer))]
     [HarmonyPrefix]
-    private static bool Kick_Prefix() => hostCurrent == null && local == null;
+    private static bool Kick_Prefix() => hostCurrent == null && local == null && pausedFor == null;
 
     /// <summary>Host: the new player picked an upgrade; apply it (Multiplier - 1) more times.</summary>
     internal static void OnUpgradePicked(ulong clientId, Action resend)
@@ -266,6 +321,23 @@ internal static class CatchUp
         catch { }
     }
 
+    private static void SendRaw(string payload)
+    {
+        try
+        {
+            var nm = NetworkManager.Singleton;
+            if (nm == null || !nm.IsServer || nm.CustomMessagingManager == null) return;
+            var writer = new FastBufferWriter(payload.Length * 2 + 64, Allocator.Temp, -1);
+            try
+            {
+                writer.WriteValueSafe(payload, false);
+                nm.CustomMessagingManager.SendNamedMessageToAll(MessageName, writer, NetworkDelivery.ReliableFragmentedSequenced);
+            }
+            finally { writer.Dispose(); }
+        }
+        catch (Exception ex) { Plugin.Log.LogError($"Catch-up message: {ex.Message}"); }
+    }
+
     private static void Announce(Pick p)
     {
         SetLocal(p);
@@ -292,6 +364,8 @@ internal static class CatchUp
         {
             reader.ReadValueSafe(out string payload, false);
             if (payload == "end") { SetLocal(null); return; }
+            if (payload == "resume") { SetPaused(null); return; }
+            if (payload.StartsWith("pause|")) { localSessionSince = Time.unscaledTime; SetPaused(payload.Substring(6)); return; }
             var f = payload.Split('|');
             if (f.Length < 6) return;
             var c = CultureInfo.InvariantCulture;

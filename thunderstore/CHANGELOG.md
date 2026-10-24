@@ -1,3 +1,7 @@
+## 1.3.3
+- **The game pauses during catch-up.** When a new player joins a restored run, everyone's game stays paused while they pick all their catch-up shops (spells, artifacts, upgrades), then resumes by itself. Before, the game ran between shops.
+- Catch-up spell shops are back with MoreSpellSlots installed too, so all of a new player's picks happen in that one paused session.
+
 ## 1.3.2
 - Fixed the check that keeps RunSaves' catch-up shops from overlapping with MoreSpellSlots' owed-spell shops.
 

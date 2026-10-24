@@ -68,7 +68,7 @@ If someone joins a restored run and the save has no build for them, they get cat
 - **Artifacts**, about as many as the others have.
 - **Upgrades**, up to `UpgradePicks` (15) of them. Each pick is applied several times, so the total matches the levels they missed. For example, joining at level 110 means 15 picks that each count about 7 times.
 
-Only the new player can pick in these shops; everyone else waits. There is no countdown or kick.
+The game stays paused for everyone from the first catch-up shop to the last, so nobody fights while the new player builds up. Only the new player can pick in these shops; everyone else sees "waiting for other players". There is no countdown or kick, and the game resumes on its own when they're done.
 
 | `[Catch-up]` setting | Default | What it does |
 |---|---|---|
