@@ -75,3 +75,7 @@ The game stays paused for everyone from the first catch-up shop to the last, so 
 | `Enabled` | `true` | Turns catch-up shops on or off. |
 | `UpgradePicks` | `15` | The most upgrade picks a new player gets. |
 | `Artifacts` | `true` | Also gives them artifact picks. |
+
+## Multiplayer settings
+
+In multiplayer everyone plays with the **host's** settings: the host's config is sent to every player from the lobby on, and the mod reads it instead of yours while you're connected. Your own messages, the save button and key, and the lobby panel stay yours. Your config file is never changed. If the host doesn't have this mod, it stays off for you in that game.

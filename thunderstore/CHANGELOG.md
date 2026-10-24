@@ -1,3 +1,6 @@
+## 1.3.4
+- **Everyone uses the host's settings.** While you're in someone's game, this mod reads the host's config instead of yours, from the lobby on. Your own messages, the save button and key, and the lobby panel stay yours. Your config file isn't changed, and your own values are back when you leave. If the host doesn't have the mod, it stays off for you in that game.
+
 ## 1.3.3
 - **The game pauses during catch-up.** When a new player joins a restored run, everyone's game stays paused while they pick all their catch-up shops (spells, artifacts, upgrades), then resumes by itself. Before, the game ran between shops.
 - Catch-up spell shops are back with MoreSpellSlots installed too, so all of a new player's picks happen in that one paused session.

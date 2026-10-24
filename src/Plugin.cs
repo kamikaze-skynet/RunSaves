@@ -22,7 +22,7 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.RunSaves";
     public const string Name = "RunSaves";
-    public const string Version = "1.3.3";
+    public const string Version = "1.3.4";
 
     internal static new ManualLogSource Log;
 
@@ -43,6 +43,7 @@ public class Plugin : BasePlugin
     public override void Load()
     {
         Log = base.Log;
+        HostConfig.Init(this, Guid, new[] { "Saving.ShowAutosaveMessage", "Saving.PauseMenuButton", "Saving.SaveKey", "Restoring.*" }, new System.Collections.Generic.Dictionary<string, string> { ["General.Enabled"] = "false" });
 
         Enabled = Config.Bind("General", "Enabled", true, "Turn run saving and restoring on or off.");
 
