@@ -61,8 +61,23 @@ internal static class CatchUp
     internal static bool Active => local != null;
     private static bool IsTargetHere => local != null && Game.LocalClientId() == local.Target;
 
+    // Shared with MoreSpellSlots: only one mod opens a player-only shop at a time.
+    private const string SpecialStoreFlag = "girthy_mods.SpecialStore";
+    private static GameObject flag;
+
+    private static void SetFlag(bool on)
+    {
+        try
+        {
+            if (on && !Game.Alive(flag)) { flag = new GameObject(SpecialStoreFlag); UObject.DontDestroyOnLoad(flag); }
+            else if (!on && Game.Alive(flag)) { UObject.Destroy(flag); flag = null; }
+        }
+        catch { }
+    }
+
     internal static void Reset()
     {
+        SetFlag(false);
         queue.Clear();
         hostCurrent = null;
         repeats.Clear();
@@ -84,13 +99,16 @@ internal static class CatchUp
             targetSpells = Math.Max(targetSpells, Game.SpellsOf(p).Count);
             if (builds.TryGetValue(Game.KeyOf(p), out var log)) { artifacts += log.FindAll(i => i.Kind == "Artifact").Count; counted++; }
         }
+        bool moreSpellSlots = false;
+        try { moreSpellSlots = BepInEx.Unity.IL2CPP.IL2CPPChainloader.Instance.Plugins.ContainsKey("girthy_mods.MoreSpellSlots"); } catch { }
         int artifactPicks = counted > 0 && Plugin.CatchUpArtifacts.Value ? (int)Math.Round((double)artifacts / counted) : 0;
 
         foreach (var p in fresh)
         {
             if (!Game.Alive(p)) continue;
             string name = Game.NameOf(p);
-            int spells = Math.Max(0, targetSpells - Game.SpellsOf(p).Count);
+            // MoreSpellSlots gives owed spell shops by itself (to everyone short of spells); don't double them.
+            int spells = moreSpellSlots ? 0 : Math.Max(0, targetSpells - Game.SpellsOf(p).Count);
             int upgradeLevels = Math.Max(0, level - 1 - (targetSpells - 1));
             int picks = Math.Min(upgradeLevels, Math.Max(1, Plugin.CatchUpPicks.Value));
             int mult = picks > 0 ? (int)Math.Ceiling((double)upgradeLevels / picks) : 1;
@@ -128,19 +146,21 @@ internal static class CatchUp
         {
             bool open = Game.StoreBusy;
             if (open) storeSeenOpen = true;
-            else if (storeSeenOpen || Time.unscaledTime - offeredAt > 20f) { hostCurrent = null; Announce(null); }
+            else if (storeSeenOpen || Time.unscaledTime - offeredAt > 20f) { hostCurrent = null; SetFlag(false); Announce(null); }
             return;
         }
         if (queue.Count == 0 || Game.StoreBusy || Time.timeScale <= 0.01f) return;
+        if (GameObject.Find(SpecialStoreFlag) != null) return; // MoreSpellSlots' owed-spell shop is running
 
         var next = queue.Dequeue();
         if (Game.PlayerFor(next.Target) == null) { Plugin.Log.LogInfo($"Catch-up: {next.Name} left; skipping their picks."); DropTarget(next.Target); return; }
         hostCurrent = next;
+        SetFlag(true);
         storeSeenOpen = false;
         offeredAt = Time.unscaledTime;
         Announce(next);
         try { store.OfferStoreToAllPlayers(next.Kind == Kind.Artifact ? StoreType.Artifact : StoreType.LevelUp); }
-        catch (Exception ex) { Plugin.Log.LogError($"Catch-up shop: {ex}"); hostCurrent = null; Announce(null); }
+        catch (Exception ex) { Plugin.Log.LogError($"Catch-up shop: {ex}"); hostCurrent = null; SetFlag(false); Announce(null); }
     }
 
     private static void DropTarget(ulong target)

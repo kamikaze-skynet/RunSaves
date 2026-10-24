@@ -1,3 +1,6 @@
+## 1.3.1
+- With MoreSpellSlots installed, catch-up spells come from its owed-spell shops instead of RunSaves', so nobody gets spells twice. Only one player-only shop opens at a time.
+
 ## 1.3.0
 - **Run setup is saved.** Saves now store the threat level (difficulty), Harmony (peaceful mode), Eternity (endless mode) and single-spell mode along with the realm. Pressing **Resume** in the lobby sets all of them for you, and the saved-run panel shows the difficulty.
 - **Catch-up picks for new players.** Someone who joins a restored run without a build in the save gets shops that only they pick from, until they match the party:
