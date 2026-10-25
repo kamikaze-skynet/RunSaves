@@ -177,6 +177,10 @@ internal static class CatchUp
         if (hostSession) SetFlag(true); // keep MoreSpellSlots' owed-spell check waiting for the whole session
         if (pausedFor == null) return;
         if (Time.unscaledTime - localSessionSince > 900f) { SetPaused(null); return; } // safety: 15 min
+        // A shop pauses the game itself and runs its own opening and closing (time-scale fades); holding the time
+        // scale at 0 through that kept the closing from finishing, so the next catch-up shop never opened. Only
+        // hold the pause in the gaps between shops.
+        if (Game.StoreBusy) return;
         if (Time.timeScale != 0f) { Time.timeScale = 0f; forcedPause = true; }
     }
 
@@ -268,7 +272,17 @@ internal static class CatchUp
             if (hostSession && !Game.StoreBusy) EndSession();
             return;
         }
-        if (Game.StoreBusy) return;
+        if (Game.StoreBusy)
+        {
+            // The shop sequence can linger after a shop has closed (no panel, not closing): don't wait on it forever.
+            bool lingering = false;
+            try { lingering = !store.IsShopPanelActive && !store.IsExitingStore; } catch { }
+            if (!lingering) { lingerSince = 0f; return; }
+            if (lingerSince <= 0f) lingerSince = Time.unscaledTime;
+            if (Time.unscaledTime - lingerSince < 5f) return;
+            Plugin.Log.LogInfo("Catch-up: the last shop has closed but the game's shop sequence is still running; offering the next one anyway.");
+            lingerSince = 0f;
+        }
 
         var next = queue.Dequeue();
         if (Game.PlayerFor(next.Target) == null) { Plugin.Log.LogInfo($"Catch-up: {next.Name} left; skipping their picks."); DropTarget(next.Target); return; }
@@ -279,6 +293,7 @@ internal static class CatchUp
         gaveUp = false;
         offeredAt = Time.unscaledTime;
         Announce(next);
+        Plugin.Log.LogInfo($"Catch-up: shop {next.Index}/{next.Count} for {next.Name}.");
         prepared = false;
         offeringOurs = true;
         try { store.OfferStoreToAllPlayers(next.Kind == Kind.Artifact ? StoreType.Artifact : StoreType.LevelUp); }
@@ -286,7 +301,7 @@ internal static class CatchUp
         finally { offeringOurs = false; }
     }
 
-    private static float lastProgress, nextPass;
+    private static float lastProgress, nextPass, lingerSince;
 
     internal static void HoldCountdown(StoreManager store)
     {
@@ -437,32 +452,6 @@ internal static class CatchUp
         if (c != null && key == Recorder.KeyFor(c.Target)) targetPicked = true;
     }
 
-    // Host: during a catch-up shop, something marked the new player as done the moment the shop opened (before they
-    // could pick), so the shop closed for everyone. Their choice only counts once they've really picked (or our own
-    // time-out / cancel ends it).
-    [HarmonyPatch(typeof(StoreManager), nameof(StoreManager.SetChoiceCompletedOnServerRpc))]
-    [HarmonyPrefix]
-    private static bool Completed_Prefix(ulong clientId)
-    {
-        try
-        {
-            var c = hostCurrent;
-            if (c == null || allowComplete || gaveUp || !Game.IsServer || clientId != c.Target || targetPicked) return true;
-            if (Time.unscaledTime - offeredAt > 4f) return true; // late enough to be their own pick (e.g. a revive card)
-            if (blockedLogged++ < 3)
-            {
-                var st = UnityEngine.StackTraceUtility.ExtractStackTrace().Split('\n');
-                var sb = new System.Text.StringBuilder();
-                int n = 0;
-                foreach (var l in st) { if (l.Contains("CatchUp") || l.Contains("Harmony") || string.IsNullOrWhiteSpace(l)) continue; sb.Append("\n    ").Append(l.Trim()); if (++n >= 8) break; }
-                Plugin.Log.LogWarning($"Catch-up: kept {c.Name}'s shop open: something marked them done before they picked.{sb}");
-            }
-            return false;
-        }
-        catch { return true; }
-    }
-
-    private static int blockedLogged;
 
     internal static void OnUpgradePicked(ulong clientId, Action resend)
     {
