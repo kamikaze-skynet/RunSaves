@@ -1,3 +1,9 @@
+## 1.4.2
+- **Catch-up can't freeze the game any more.** If a catch-up stops making progress (the joiner's shop is done but something else is stuck), the host ends it after about two minutes: any open shop is closed and everyone's game resumes. The host can also end it at once with **Delete** (`[Catch-up] CancelKey`).
+- The game's own shops (a level-up that happened right before the pause) now wait until the catch-up is over, instead of mixing in with the catch-up shops. Mixed-in shops were what left the host unable to pick.
+- Drop-in: the joiner's game now uses the host's run settings and **the host's map layout**. Each realm has several layouts, picked from a random number the host shares before the run, which a joiner never got. A different layout broke dozens of objects on the joiner's side.
+- Drop-in: the party level is set directly on the joiner's game (replaying the game's own level message errored there).
+
 ## 1.4.1
 - **The game can't stay paused forever any more.** If a player hasn't picked in a catch-up shop after 90 seconds, the shop closes and the rest of their catch-up is skipped. New setting `[Catch-up] PickTimeoutSeconds` (0 = wait forever).
 - Drop-in: catch-up picks only start once the joiner's wizard is actually in the game. If it doesn't show up within 30 seconds, there are no catch-up picks, so nobody is frozen.

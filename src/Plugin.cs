@@ -22,7 +22,7 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.RunSaves";
     public const string Name = "RunSaves";
-    public const string Version = "1.4.1";
+    public const string Version = "1.4.2";
 
     internal static new ManualLogSource Log;
 
@@ -40,6 +40,7 @@ public class Plugin : BasePlugin
     internal static ConfigEntry<int> CatchUpPicks;
     internal static ConfigEntry<bool> CatchUpArtifacts;
     internal static ConfigEntry<float> CatchUpTimeout;
+    internal static ConfigEntry<string> CatchUpCancelKey;
     internal static ConfigEntry<bool> DropInEnabled;
 
     public override void Load()
@@ -78,6 +79,8 @@ public class Plugin : BasePlugin
         CatchUpTimeout = Config.Bind("Catch-up", "PickTimeoutSeconds", 90f,
             new ConfigDescription("If the player hasn't picked in a catch-up shop after this long, the shop closes and the rest of their catch-up is skipped, so the game never stays paused. 0 = wait forever.", new AcceptableValueRange<float>(0f, 600f)));
 
+        CatchUpCancelKey = Config.Bind("Catch-up", "CancelKey", "Delete",
+            "Host: key that ends a catch-up right away and unpauses everyone (Unity Input System key name). Empty = no key.");
         DropInEnabled = Config.Bind("Drop-in", "Enabled", true,
             "Host: friends can join a run that's already going. They get their wizard next to the others, then catch-up picks (or their old build back if they were in this run before). Everyone needs RunSaves.");
 

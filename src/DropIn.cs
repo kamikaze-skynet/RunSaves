@@ -122,6 +122,19 @@ internal static class DropIn
         }
     }
 
+    /// <summary>The run's settings the joiner's game must have before its map loads: the realm, difficulty, modes, the
+    /// shared random seed (it picks the map layout) and the layout itself.</summary>
+    private static string EarlyPayload()
+    {
+        var c = CultureInfo.InvariantCulture;
+        var rd = UObject.FindObjectOfType<RunData>();
+        if (rd == null) return "";
+        int variant = -1;
+        try { var wvm = UObject.FindObjectOfType<WorldVariantManager>(); if (wvm != null) variant = wvm.activeMapVariantIndex; } catch { }
+        return string.Join(Fld.ToString(), ((int)rd.SelectedWorld).ToString(c), ((int)rd.SelectedDifficulty).ToString(c),
+            rd.IsPeacefulModeEnabled ? "1" : "0", rd.IsEndlessModeEnabled ? "1" : "0", rd.RandomSeed.ToString(c), Clean(rd.RunId), variant.ToString(c));
+    }
+
     private static SessionManager session;
     private static SessionManager Session
     {
@@ -175,7 +188,11 @@ internal static class DropIn
         // Tell the joiner's game early that it's joining a run in progress (it then ignores upgrades sent live
         // until it has the full picture, so none are applied twice). Repeated until they say hello.
         foreach (var j in joiners.Values)
-            if (!j.StateSent && t >= j.NextEarly && t - j.Seen < 60f) { j.NextEarly = t + 1f; try { Send("early", null, j.Id); } catch { } }
+            if (!j.StateSent && t >= j.NextEarly && t - j.Seen < 60f)
+            {
+                j.NextEarly = t + (t - j.Seen < 15f ? 0.25f : 1f);
+                try { Send("early", EarlyPayload(), j.Id); } catch { }
+            }
         if (Game.Run == null || !Recorder.RunActive || Restorer.Busy) return;
         var ids = ConnectedIds();
 
@@ -456,8 +473,63 @@ internal static class DropIn
     private static bool replaying;     // our own local replay is running
     private static int helloTries;
 
+    private static int hostVariant = -1;
+    private static bool runSetupApplied;
+
+    private static void OnEarly(string body)
+    {
+        if (runSetupApplied || string.IsNullOrEmpty(body)) return;
+        var f = body.Split(Fld);
+        if (f.Length < 7) return;
+        var c = CultureInfo.InvariantCulture;
+        try
+        {
+            var rd = UObject.FindObjectOfType<RunData>();
+            if (rd == null) return;
+            rd.SelectedWorld = (World)int.Parse(f[0], c);
+            rd.SelectedDifficulty = (Difficulty)int.Parse(f[1], c);
+            rd.IsPeacefulModeEnabled = f[2] == "1";
+            rd.IsEndlessModeEnabled = f[3] == "1";
+            rd.RandomSeed = int.Parse(f[4], c);
+            if (!string.IsNullOrEmpty(f[5])) rd.RunId = f[5];
+            hostVariant = int.Parse(f[6], c);
+            runSetupApplied = true;
+            Plugin.Log.LogInfo($"Drop-in: using the host's run: {rd.SelectedWorld}, {rd.SelectedDifficulty}, map layout {hostVariant}.");
+
+            // Too late for the map? Switch to the host's layout now.
+            var wvm = UObject.FindObjectOfType<WorldVariantManager>();
+            if (wvm != null && hostVariant >= 0 && wvm.activeMapVariantIndex != hostVariant)
+            {
+                Plugin.Log.LogWarning($"Drop-in: this game had already loaded map layout {wvm.activeMapVariantIndex}; switching to the host's ({hostVariant}).");
+                wvm.activeMapVariantIndex = hostVariant;
+                wvm.ActivateCorrectVariant();
+            }
+        }
+        catch (Exception ex) { Plugin.Log.LogError($"Drop-in (run setup): {ex.Message}"); }
+    }
+
+    /// <summary>The joiner's map uses the host's layout (it's picked from the run's seed, which a joiner never got).</summary>
+    [HarmonyPatch(typeof(WorldVariantManager), nameof(WorldVariantManager.ActivateCorrectVariant))]
+    [HarmonyPrefix]
+    [HarmonyPriority(Priority.First)]
+    private static void Variant_Prefix(WorldVariantManager __instance)
+    {
+        try
+        {
+            if (hostVariant < 0 || Game.IsServer) return;
+            if (__instance.activeMapVariantIndex != hostVariant)
+            {
+                Plugin.Log.LogInfo($"Drop-in: map layout {__instance.activeMapVariantIndex} -> {hostVariant} (the host's).");
+                __instance.activeMapVariantIndex = hostVariant;
+            }
+        }
+        catch { }
+    }
+
     private static void ResetClient()
     {
+        hostVariant = -1;
+        runSetupApplied = false;
         stateReceived = upgradesDone = levelDone = runStartDone = dropping = expectDropIn = replaying = false;
         helloTries = 0;
         level = totalRevives = -1;
@@ -505,7 +577,7 @@ internal static class DropIn
         var party = Game.Party;
         if (!levelDone && party != null && level > 0)
         {
-            if (level > party.level) try { Local(party, () => { party.SetLevelRpc(level); return true; }); } catch (Exception ex) { Plugin.Log.LogWarning($"Drop-in (level): {ex.Message}"); }
+            if (level > party.level) try { party.level = level; } catch (Exception ex) { Plugin.Log.LogWarning($"Drop-in (level): {ex.Message}"); }
             var rv = Game.Revives;
             if (rv != null && totalRevives >= 0)
                 try { Local(rv, () => { rv.InitializeOnClientsRpc(totalRevives); return true; }); } catch (Exception ex) { Plugin.Log.LogWarning($"Drop-in (revives): {ex.Message}"); }
@@ -710,7 +782,7 @@ internal static class DropIn
                 }
             }
             else if (kind == "state") OnState(body);
-            else if (kind == "early" && !stateReceived) expectDropIn = true;
+            else if (kind == "early" && !stateReceived) { expectDropIn = true; OnEarly(body); }
         }
         catch (Exception ex) { Plugin.Log.LogError($"Drop-in (receive): {ex}"); }
     }

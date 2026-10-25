@@ -50,7 +50,7 @@ internal static class CatchUp
     private static Pick hostCurrent;            // the catch-up shop that's open now
     private static bool storeSeenOpen;
     private static float offeredAt, openedAt;
-    private static bool gaveUp, forceCountdown;
+    private static bool gaveUp, forceCountdown, prepared, offeringOurs;
     private static readonly List<Action> repeats = new();
     private static int echoesExpected;
 
@@ -80,6 +80,8 @@ internal static class CatchUp
     {
         SetFlag(false);
         hostSession = false;
+        deferred.Clear();
+        prepared = false;
         if (pausedFor != null) SetPaused(null);
         queue.Clear();
         hostCurrent = null;
@@ -135,6 +137,7 @@ internal static class CatchUp
 
     private static void StartSession()
     {
+        lastProgress = Time.unscaledTime;
         hostSession = true;
         SetFlag(true);
         var names = new List<string>();
@@ -153,6 +156,7 @@ internal static class CatchUp
         Plugin.Log.LogInfo("Catch-up done; game resumed.");
         SendRaw("resume");
         SetPaused(null);
+        OfferDeferred();
     }
 
     private static void SetPaused(string who)
@@ -183,6 +187,21 @@ internal static class CatchUp
         Listen();
         LocalTick();
         if (!Game.IsServer) return;
+
+        // Never stay frozen: the host's key, or no progress for too long, ends the catch-up for everyone.
+        if (hostSession)
+        {
+            float stuckFor = Time.unscaledTime - lastProgress;
+            float limit = Math.Max(60f, Plugin.CatchUpTimeout.Value + 30f);
+            bool key = UiKit.Pressed(Plugin.CatchUpCancelKey.Value);
+            if (key || stuckFor > limit)
+            {
+                Plugin.Log.LogWarning(key ? "Catch-up: ended by the host's key." : $"Catch-up: no progress for {stuckFor:0} s; ending it so the game can go on.");
+                Toast.Show("Catch-up ended. Resuming!", 4f);
+                ForceEnd();
+                return;
+            }
+        }
 
         // Re-send the new player's last upgrade (one per frame).
         if (repeats.Count > 0)
@@ -237,12 +256,39 @@ internal static class CatchUp
         var next = queue.Dequeue();
         if (Game.PlayerFor(next.Target) == null) { Plugin.Log.LogInfo($"Catch-up: {next.Name} left; skipping their picks."); DropTarget(next.Target); return; }
         hostCurrent = next;
+        lastProgress = Time.unscaledTime;
         storeSeenOpen = false;
         gaveUp = false;
         offeredAt = Time.unscaledTime;
         Announce(next);
+        prepared = false;
+        offeringOurs = true;
         try { store.OfferStoreToAllPlayers(next.Kind == Kind.Artifact ? StoreType.Artifact : StoreType.LevelUp); }
         catch (Exception ex) { Plugin.Log.LogError($"Catch-up shop: {ex}"); hostCurrent = null; Announce(null); }
+        finally { offeringOurs = false; }
+    }
+
+    private static float lastProgress;
+
+    /// <summary>Ends the catch-up now: no more catch-up shops, any open shop is closed (everyone's choice counts as
+    /// made, then the game's own countdown), and everyone's game resumes.</summary>
+    private static void ForceEnd()
+    {
+        queue.Clear();
+        repeats.Clear();
+        var store = Game.Store;
+        hostCurrent = null;
+        prepared = false;
+        Announce(null);
+        if (store != null && Game.StoreBusy)
+        {
+            foreach (var p in Game.Players())
+                try { store.SetChoiceCompletedOnServerRpc(p.OwnerClientId); } catch { }
+            forceCountdown = true;
+            try { store.StartCountdown(); } catch { }
+            finally { forceCountdown = false; }
+        }
+        if (hostSession) EndSession();
     }
 
     private static void DropTarget(ulong target)
@@ -259,8 +305,59 @@ internal static class CatchUp
     {
         var c = hostCurrent;
         if (c == null || !Game.IsServer) return;
+        if (prepared)
+        {
+            // Another shop is starting, so ours is over: everyone picks in this one.
+            Plugin.Log.LogInfo("Catch-up: a normal shop came up after ours; everyone picks in it.");
+            hostCurrent = null;
+            prepared = false;
+            Announce(null);
+            return;
+        }
+        prepared = true;
         try { __instance.SetChoosingPlayersRpc(new Il2CppStructArray<ulong>(new[] { c.Target })); }
         catch (Exception ex) { Plugin.Log.LogError($"Catch-up choosers: {ex.Message}"); }
+    }
+
+    // Our shop closed (the game's exit, on the host).
+    [HarmonyPatch(typeof(StoreManager), nameof(StoreManager.ExitStoreRpc))]
+    [HarmonyPostfix]
+    private static void ExitStore_Postfix(StoreManager __instance)
+    {
+        try
+        {
+            if (!Game.IsServer || hostCurrent == null || !prepared) return;
+            if (__instance.__rpc_exec_stage != Unity.Netcode.NetworkBehaviour.__RpcExecStage.Execute) return;
+            lastProgress = Time.unscaledTime;
+            hostCurrent = null;
+            prepared = false;
+            Announce(null);
+        }
+        catch { }
+    }
+
+    // While a catch-up session runs, the game's own shops (a level-up that happened just before the pause) wait
+    // until it's over, so shops never interleave with the catch-up ones.
+    private static readonly List<StoreType> deferred = new();
+
+    [HarmonyPatch(typeof(StoreManager), nameof(StoreManager.OfferStoreToAllPlayers))]
+    [HarmonyPrefix]
+    private static bool Offer_Prefix(StoreType storeType)
+    {
+        if (offeringOurs || !hostSession || !Game.IsServer) return true;
+        deferred.Add(storeType);
+        Plugin.Log.LogInfo($"Catch-up: the game's {storeType} shop waits until the catch-up is done.");
+        return false;
+    }
+
+    private static void OfferDeferred()
+    {
+        if (deferred.Count == 0) return;
+        var list = new List<StoreType>(deferred);
+        deferred.Clear();
+        var store = Game.Store;
+        if (store == null) return;
+        foreach (var t in list) try { store.OfferStoreToAllPlayers(t); } catch (Exception ex) { Plugin.Log.LogError($"Catch-up (deferred shop): {ex.Message}"); }
     }
 
     // No countdown or kick for a catch-up shop (the new player may take their time).
