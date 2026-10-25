@@ -364,7 +364,16 @@ internal static class CatchUp
             return;
         }
         prepared = true;
-        try { __instance.SetChoosingPlayersRpc(new Il2CppStructArray<ulong>(new[] { c.Target })); }
+        // The game's list is of players who have ALREADY chosen (everyone else is shown as still choosing): list
+        // everyone but the new player. (Before 1.5.0 only the new player was listed, which told the game they had
+        // already picked: their shop closed at once, then everyone else was skipped and it closed for all.)
+        try
+        {
+            var done = new List<ulong>();
+            foreach (var p in Game.Players())
+                if (p.OwnerClientId != c.Target && !done.Contains(p.OwnerClientId)) done.Add(p.OwnerClientId);
+            __instance.SetChoosingPlayersRpc(new Il2CppStructArray<ulong>(done.ToArray()));
+        }
         catch (Exception ex) { Plugin.Log.LogError($"Catch-up choosers: {ex.Message}"); }
     }
 
