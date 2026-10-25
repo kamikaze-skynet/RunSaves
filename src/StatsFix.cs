@@ -37,7 +37,7 @@ internal static class StatsFix
                 var t = e.Current;
                 if (t != null && t.TrackerClientId == clientId) return;
             }
-            if (Game.PlayerFor(clientId) == null) return; // not a player (yet)
+            if (Game.PlayerFor(clientId, true) == null) return; // not a player (yet)
             var added = new PlayerStatsTracker(clientId, tracker.serverGameplayEvents);
             set.Add(added);
             added.StartTracking();

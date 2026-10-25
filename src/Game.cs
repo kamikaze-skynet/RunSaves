@@ -65,26 +65,49 @@ internal static class Game
         get { try { var nm = NetworkManager.Singleton; return nm != null && nm.IsListening && !nm.IsServer; } catch { return false; } }
     }
 
-    internal static List<GameplayPlayerIdentity> Players()
+    // The players, looked up at most twice a second: a scene search per call (several a frame) made the game stutter.
+    private static List<GameplayPlayerIdentity> cachedPlayers = new();
+    private static float playersAt = -9f;
+
+    private static List<GameplayPlayerIdentity> Cached()
     {
+        if (Time.unscaledTime - playersAt < 0.5f && cachedPlayers.TrueForAll(Alive)) return cachedPlayers;
+        playersAt = Time.unscaledTime;
         var list = new List<GameplayPlayerIdentity>();
         foreach (var p in UObject.FindObjectsOfType<GameplayPlayerIdentity>())
             if (p != null && p.IsSpawned) list.Add(p);
         list.Sort((a, b) => a.OwnerClientId.CompareTo(b.OwnerClientId));
+        cachedPlayers = list;
         return list;
     }
 
-    internal static GameplayPlayerIdentity PlayerFor(ulong clientId)
+    internal static List<GameplayPlayerIdentity> Players()
     {
-        foreach (var p in UObject.FindObjectsOfType<GameplayPlayerIdentity>())
-            if (p != null && p.IsSpawned && p.OwnerClientId == clientId) return p;
+        var list = new List<GameplayPlayerIdentity>();
+        foreach (var p in Cached()) if (Alive(p) && p.IsSpawned) list.Add(p);
+        return list;
+    }
+
+    /// <param name="fresh">Search the scene now (for a player who may have just appeared).</param>
+    internal static GameplayPlayerIdentity PlayerFor(ulong clientId, bool fresh = false)
+    {
+        if (fresh) playersAt = -9f;
+        foreach (var p in Cached())
+            if (Alive(p) && p.IsSpawned && p.OwnerClientId == clientId) return p;
+        if (!fresh && Time.unscaledTime - playersAt > 0.1f)
+        {
+            // Not there: maybe new. Look again, but not more than ten times a second.
+            playersAt = -9f;
+            foreach (var p in Cached())
+                if (Alive(p) && p.IsSpawned && p.OwnerClientId == clientId) return p;
+        }
         return null;
     }
 
     internal static GameplayPlayerIdentity LocalPlayer()
     {
-        foreach (var p in UObject.FindObjectsOfType<GameplayPlayerIdentity>())
-            if (p != null && p.IsSpawned && p.IsOwner) return p;
+        foreach (var p in Cached())
+            if (Alive(p) && p.IsSpawned && p.IsOwner) return p;
         return null;
     }
 
