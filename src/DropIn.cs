@@ -104,6 +104,7 @@ internal static class DropIn
 
             ulong id = request.ClientNetworkId;
             string name = S("DisplayName");
+            Plugin.Log.LogInfo($"Drop-in: join request from {name}: character {I("CharacterId")}, skin {I("SkinId")}, title {I("PlayerTitleId")}, platform {I("Platform")}, version {S("Version")}.");
             sm.AddPlayerData(id, S("PlayerId"), name, (CharacterId)I("CharacterId"), (SkinId)I("SkinId"), B("JoiningViaMatchmaking"),
                 I("CharacterRank"), F("CharacterRankProgress"), I("CharacterPrestige"), (Platform)I("Platform"), S("PlatformPlayerId"),
                 (PlayerTitleId)I("PlayerTitleId"), I("ActiveCurseLevel"), B("HasTinyModeCurse"));
@@ -254,8 +255,16 @@ internal static class DropIn
                 // Wait for their wizard and starting spell, then match them to the party.
                 int spells = Game.SpellsOf(j.Identity).Count;
                 if (spells != j.Spells) { j.Spells = spells; j.SpellsSince = now; }
-                bool settled = spells > 0 && now - j.SpellsSince > 3f;
+                bool settled = spells > 0 && now - j.SpellsSince > 3f && HasWizard(j.Id);
                 if (!settled && now - j.At < 30f) return;
+                if (!settled)
+                {
+                    // Their game never got a working wizard: catch-up shops would only freeze everyone.
+                    Plugin.Log.LogWarning($"Drop-in: {j.Name}'s wizard didn't come up within 30 s (spells: {spells}, wizard: {HasWizard(j.Id)}); no catch-up picks.");
+                    Toast.Show($"{j.Name}'s game didn't finish joining. No catch-up picks.", 6f);
+                    joiners.Remove(j.Id);
+                    return;
+                }
                 j.Step = 4;
                 j.At = now;
                 Finish(j);
@@ -344,6 +353,17 @@ internal static class DropIn
         Recorder.Remember(p);
         Plugin.Log.LogInfo($"Drop-in: gave {j.Name} back {sent} upgrades.");
         Toast.Show($"{j.Name} is back with their build.", 5f);
+    }
+
+    private static bool HasWizard(ulong clientId)
+    {
+        try
+        {
+            foreach (var pl in UObject.FindObjectsOfType<GameplayPlayer>())
+                if (pl != null && pl.IsSpawned && pl.OwnerClientId == clientId) return true;
+        }
+        catch { }
+        return false;
     }
 
     private static Vector3 SpawnPosition()
@@ -526,6 +546,19 @@ internal static class DropIn
             Plugin.Log.LogInfo($"Drop-in: set up {pi.Name} here.");
         }
         catch (Exception ex) { Plugin.Log.LogError($"Drop-in (set up {pi.Name}): {ex.Message}"); }
+    }
+
+    // Diagnostics: every game logs each player being set up (and the game's own errors show up with where they came from).
+    [HarmonyPatch(typeof(GameplayPlayerIdentity), nameof(GameplayPlayerIdentity.InitializeOnClientsRpc))]
+    [HarmonyPrefix]
+    private static void Init_Prefix(GameplayPlayerIdentity __instance, string displayName, CharacterId characterId)
+    {
+        try
+        {
+            if (__instance.__rpc_exec_stage == NetworkBehaviour.__RpcExecStage.Execute)
+                Plugin.Log.LogInfo($"Setting up player {displayName} (client {__instance.OwnerClientId}, {characterId}){(__instance.IsOwner ? " - that's you" : "")}.");
+        }
+        catch { }
     }
 
     // As soon as another player's identity arrives here, before their wizard does.

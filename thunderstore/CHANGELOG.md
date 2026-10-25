@@ -1,3 +1,8 @@
+## 1.4.1
+- **The game can't stay paused forever any more.** If a player hasn't picked in a catch-up shop after 90 seconds, the shop closes and the rest of their catch-up is skipped. New setting `[Catch-up] PickTimeoutSeconds` (0 = wait forever).
+- Drop-in: catch-up picks only start once the joiner's wizard is actually in the game. If it doesn't show up within 30 seconds, there are no catch-up picks, so nobody is frozen.
+- More detail in the log for drop-in joins: the join request, each player being set up on every computer, and the game's own errors with where they came from.
+
 ## 1.4.0
 - **Drop-in joining (experimental).** Friends can join a run that's already going, from a Steam invite or "Join game", without waiting for the next run. Their game loads the realm and gets caught up on everyone else (who they are, their upgrades, the party level), then their wizard appears next to the others.
   - A new player then gets catch-up picks in the paused catch-up session (spells, artifacts, upgrades).

@@ -22,7 +22,7 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.RunSaves";
     public const string Name = "RunSaves";
-    public const string Version = "1.4.0";
+    public const string Version = "1.4.1";
 
     internal static new ManualLogSource Log;
 
@@ -39,6 +39,7 @@ public class Plugin : BasePlugin
     internal static ConfigEntry<bool> CatchUpEnabled;
     internal static ConfigEntry<int> CatchUpPicks;
     internal static ConfigEntry<bool> CatchUpArtifacts;
+    internal static ConfigEntry<float> CatchUpTimeout;
     internal static ConfigEntry<bool> DropInEnabled;
 
     public override void Load()
@@ -74,10 +75,13 @@ public class Plugin : BasePlugin
         CatchUpPicks = Config.Bind("Catch-up", "UpgradePicks", 15,
             new ConfigDescription("Most upgrade picks a new player gets. Each pick counts as several level-ups so the total matches the levels they missed.", new AcceptableValueRange<int>(1, 100)));
         CatchUpArtifacts = Config.Bind("Catch-up", "Artifacts", true, "Also give artifact picks (about as many as the others have).");
+        CatchUpTimeout = Config.Bind("Catch-up", "PickTimeoutSeconds", 90f,
+            new ConfigDescription("If the player hasn't picked in a catch-up shop after this long, the shop closes and the rest of their catch-up is skipped, so the game never stays paused. 0 = wait forever.", new AcceptableValueRange<float>(0f, 600f)));
 
         DropInEnabled = Config.Bind("Drop-in", "Enabled", true,
             "Host: friends can join a run that's already going. They get their wizard next to the others, then catch-up picks (or their old build back if they were in this run before). Everyone needs RunSaves.");
 
+        Diag.Hook();
         var harmony = new Harmony(Guid);
         harmony.PatchAll(typeof(Recorder));
         harmony.PatchAll(typeof(Saver));

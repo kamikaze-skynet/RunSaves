@@ -49,7 +49,8 @@ internal static class CatchUp
     private static readonly Queue<Pick> queue = new();
     private static Pick hostCurrent;            // the catch-up shop that's open now
     private static bool storeSeenOpen;
-    private static float offeredAt;
+    private static float offeredAt, openedAt;
+    private static bool gaveUp, forceCountdown;
     private static readonly List<Action> repeats = new();
     private static int echoesExpected;
 
@@ -197,7 +198,32 @@ internal static class CatchUp
         if (hostCurrent != null)
         {
             bool open = Game.StoreBusy;
-            if (open) storeSeenOpen = true;
+            if (open)
+            {
+                if (!storeSeenOpen) openedAt = Time.unscaledTime;
+                storeSeenOpen = true;
+                // The player can't (or won't) pick: don't keep everyone waiting forever. Mark their choice as made,
+                // which closes the shop, and drop the rest of their catch-up picks.
+                float limit = Plugin.CatchUpTimeout.Value;
+                if (limit > 0f && Time.unscaledTime - openedAt > limit && !gaveUp)
+                {
+                    gaveUp = true;
+                    var cur = hostCurrent;
+                    Plugin.Log.LogWarning($"Catch-up: {cur.Name} didn't pick within {limit:0} s; closing the shop and skipping the rest of their picks.");
+                    Toast.Show($"{cur.Name} didn't pick in time; skipping their catch-up.", 6f);
+                    DropTarget(cur.Target);
+                    try { store.SetChoiceCompletedOnServerRpc(cur.Target); } catch (Exception ex) { Plugin.Log.LogError($"Catch-up (close shop): {ex.Message}"); }
+                }
+                else if (gaveUp && Time.unscaledTime - openedAt > limit + 10f)
+                {
+                    // Still open: let the game's own countdown run so the shop can end.
+                    hostCurrent = null;
+                    Announce(null);
+                    forceCountdown = true;
+                    try { store.StartCountdown(); } catch { }
+                    finally { forceCountdown = false; }
+                }
+            }
             else if (storeSeenOpen || Time.unscaledTime - offeredAt > 20f) { hostCurrent = null; Announce(null); }
             return;
         }
@@ -212,6 +238,7 @@ internal static class CatchUp
         if (Game.PlayerFor(next.Target) == null) { Plugin.Log.LogInfo($"Catch-up: {next.Name} left; skipping their picks."); DropTarget(next.Target); return; }
         hostCurrent = next;
         storeSeenOpen = false;
+        gaveUp = false;
         offeredAt = Time.unscaledTime;
         Announce(next);
         try { store.OfferStoreToAllPlayers(next.Kind == Kind.Artifact ? StoreType.Artifact : StoreType.LevelUp); }
@@ -239,7 +266,7 @@ internal static class CatchUp
     // No countdown or kick for a catch-up shop (the new player may take their time).
     [HarmonyPatch(typeof(StoreManager), nameof(StoreManager.StartCountdown))]
     [HarmonyPrefix]
-    private static bool StartCountdown_Prefix() => hostCurrent == null && local == null && pausedFor == null;
+    private static bool StartCountdown_Prefix() => forceCountdown || (hostCurrent == null && local == null && pausedFor == null);
 
     [HarmonyPatch(typeof(StoreManager), nameof(StoreManager.KickPlayer))]
     [HarmonyPrefix]
