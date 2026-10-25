@@ -1,3 +1,6 @@
+## 1.5.2
+- **Fixed: the game stayed frozen after the catch-up finished.** A shop puts the game speed back to what it was when the shop opened, which during a catch-up was paused, so the last catch-up shop froze everyone again as it closed. After a catch-up ends, every game now makes sure it's running again.
+
 ## 1.5.1
 - **Fixed: only the first catch-up shop opened** ("1/3", then nothing). The catch-up pause held the game frozen while the shop was closing, so the game's shop sequence never finished and the next shop never came. The pause now only holds between shops; each shop pauses the game itself.
 - Removed the 1.4.9 guard on the new player's pick (not needed now, and it could ignore a very quick pick).

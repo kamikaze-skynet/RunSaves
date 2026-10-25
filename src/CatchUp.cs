@@ -167,6 +167,9 @@ internal static class CatchUp
         else
         {
             if (forcedPause) { Time.timeScale = 1f; forcedPause = false; }
+            // A shop restores the game speed it saw when it opened, which was our pause: the last catch-up shop
+            // finishing its closing after this froze everyone again. Keep making sure the game runs for a moment.
+            resumeUntil = Time.unscaledTime + 8f;
             Toast.Show("Catch-up done. Resuming!", 3f);
         }
     }
@@ -175,7 +178,11 @@ internal static class CatchUp
     internal static void EnforcePause()
     {
         if (hostSession) SetFlag(true); // keep MoreSpellSlots' owed-spell check waiting for the whole session
-        if (pausedFor == null) return;
+        if (pausedFor == null)
+        {
+            if (Time.unscaledTime < resumeUntil && !Game.StoreBusy && Time.timeScale < 0.01f) Time.timeScale = 1f;
+            return;
+        }
         if (Time.unscaledTime - localSessionSince > 900f) { SetPaused(null); return; } // safety: 15 min
         // A shop pauses the game itself and runs its own opening and closing (time-scale fades); holding the time
         // scale at 0 through that kept the closing from finishing, so the next catch-up shop never opened. Only
@@ -184,7 +191,7 @@ internal static class CatchUp
         if (Time.timeScale != 0f) { Time.timeScale = 0f; forcedPause = true; }
     }
 
-    private static float localSessionSince;
+    private static float localSessionSince, resumeUntil;
 
     /// <summary>Host and clients, every frame.</summary>
     internal static void Tick()
