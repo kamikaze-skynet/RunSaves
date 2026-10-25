@@ -684,7 +684,7 @@ internal static class DropIn
         try
         {
             ulong me = Game.LocalClientId();
-            int added = 0, off = 0;
+            int added = 0, off = 0, repaired = 0;
             // Switched-off spells come back once their player equips them.
             for (int i = switchedOff.Count - 1; i >= 0; i--)
             {
@@ -710,16 +710,39 @@ internal static class DropIn
                 var stats = id?.stats;
                 if (stats == null) continue;
                 var attrs = stats.attributeForSpells;
-                if (attrs != null && attrs.ContainsKey(type)) continue;
+                if (attrs != null && attrs.ContainsKey(type)) { if (Repair(ps, id)) repaired++; continue; }
                 if (Game.SpellsOf(id).Contains(type))
                 {
                     try { stats.AddSpell(type); added++; } catch (Exception ex) { Plugin.Log.LogWarning($"Drop-in (add {type}): {ex.Message}"); }
                 }
                 else { ps.enabled = false; switchedOff.Add(ps); off++; }
             }
-            if (added + off > 0) Plugin.Log.LogInfo($"Drop-in: other players' spells set up here ({added} added to their stats, {off} unused spell objects switched off).");
+            if (added + off + repaired > 0) Plugin.Log.LogInfo($"Drop-in: other players' spells set up here ({added} added to their stats, {repaired} finished setting up, {off} unused spell objects switched off).");
         }
         catch (Exception ex) { Plugin.Log.LogWarning($"Drop-in (other players' spells): {ex.Message}"); }
+    }
+
+    /// <summary>A spell that spawned here before its player was set up never finished its own setup (no stats, no
+    /// element): it then failed every frame. Finish it now that the player is known.</summary>
+    private static bool Repair(PlayerSpell ps, GameplayPlayerIdentity id)
+    {
+        bool fixedSomething = false;
+        try
+        {
+            if (ps.Caster == null)
+            {
+                foreach (var gp in UObject.FindObjectsOfType<GameplayPlayer>())
+                    if (gp != null && gp.OwnerClientId == ps.OwnerClientId) { ps.Caster = gp; fixedSomething = true; break; }
+            }
+            if (ps.Stats == null && id.stats != null) { ps.Stats = new IPlayerStats(id.stats.Pointer); fixedSomething = true; }
+            if (ps.ElementDeterminer == null)
+            {
+                var f = ps.elementDeterminerFactory;
+                if (f != null) { ps.ElementDeterminer = f.Create(new IGameplayPlayerIdentity(id.Pointer)); fixedSomething = true; }
+            }
+        }
+        catch (Exception ex) { Plugin.Log.LogWarning($"Drop-in (finish spell setup): {ex.Message}"); }
+        return fixedSomething;
     }
 
     private static void TryInit(PlayerInit pi)

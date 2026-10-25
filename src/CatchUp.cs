@@ -111,7 +111,7 @@ internal static class CatchUp
         {
             if (!Game.Alive(p)) continue;
             string name = Game.NameOf(p);
-            int spells = Math.Max(0, targetSpells - Game.SpellsOf(p).Count);
+            int spells = Plugin.CatchUpSpells.Value ? Math.Max(0, targetSpells - Game.SpellsOf(p).Count) : 0;
             int upgradeLevels = Math.Max(0, level - 1 - (targetSpells - 1));
             int picks = Math.Min(upgradeLevels, Math.Max(1, Plugin.CatchUpPicks.Value));
             int mult = picks > 0 ? (int)Math.Ceiling((double)upgradeLevels / picks) : 1;

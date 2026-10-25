@@ -22,7 +22,7 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.RunSaves";
     public const string Name = "RunSaves";
-    public const string Version = "1.5.5";
+    public const string Version = "1.5.6";
 
     internal static new ManualLogSource Log;
 
@@ -39,6 +39,7 @@ public class Plugin : BasePlugin
     internal static ConfigEntry<bool> CatchUpEnabled;
     internal static ConfigEntry<int> CatchUpPicks;
     internal static ConfigEntry<bool> CatchUpArtifacts;
+    internal static ConfigEntry<bool> CatchUpSpells;
     internal static ConfigEntry<float> CatchUpTimeout;
     internal static ConfigEntry<string> CatchUpCancelKey;
     internal static ConfigEntry<bool> DropInEnabled;
@@ -76,6 +77,8 @@ public class Plugin : BasePlugin
         CatchUpPicks = Config.Bind("Catch-up", "UpgradePicks", 15,
             new ConfigDescription("Most upgrade picks a new player gets. Each pick counts as several level-ups so the total matches the levels they missed.", new AcceptableValueRange<int>(1, 100)));
         CatchUpArtifacts = Config.Bind("Catch-up", "Artifacts", true, "Also give artifact picks (about as many as the others have).");
+        CatchUpSpells = Config.Bind("Catch-up", "SpellPicks", false,
+            "Give a player who joins mid-run spell picks to match the others' spell count (from party level 5). Off for now: hosts crashed after a joiner's catch-up spell pick. Without it they get the next spells as they level.");
         CatchUpTimeout = Config.Bind("Catch-up", "PickTimeoutSeconds", 90f,
             new ConfigDescription("If the player hasn't picked in a catch-up shop after this long, the shop closes and the rest of their catch-up is skipped, so the game never stays paused. 0 = wait forever.", new AcceptableValueRange<float>(0f, 600f)));
 
