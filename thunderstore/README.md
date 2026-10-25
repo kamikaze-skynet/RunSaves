@@ -75,7 +75,7 @@ Everyone needs RunSaves for this. Turn it off with `[Drop-in] Enabled`.
 
 If someone joins a restored run and the save has no build for them, or drops into a run in progress, they get catch-up shops. The party level is shared, so they're already at the party's level; the shops give them a build to match:
 
-- **Spells** until they have as many as the others.
+- **Spells** until they have as many as the others, each followed by the upgrade the game gives a new spell. (The game only offers spells at set party levels, so a late player would otherwise stay a spell behind.)
 - **Artifacts**, about as many as the others have.
 - **Upgrades**, up to `UpgradePicks` (15) of them. Each pick is applied several times, so the total matches the levels they missed. For example, joining at level 110 means 15 picks that each count about 7 times.
 
@@ -90,6 +90,7 @@ The game stays paused for everyone from the first catch-up shop to the last, so 
 | `Enabled` | `true` | Turns catch-up shops on or off. |
 | `UpgradePicks` | `15` | The most upgrade picks a new player gets. |
 | `Artifacts` | `true` | Also gives them artifact picks. |
+| `MissedSpells` | `true` | Also gives them the spells the party has earned. |
 
 ## Multiplayer settings
 

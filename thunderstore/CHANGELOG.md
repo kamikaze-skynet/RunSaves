@@ -1,3 +1,7 @@
+## 1.5.8
+- **Late players get the spells they missed again** (setting renamed to `[Catch-up] MissedSpells`, on by default). The game only offers a new spell at set party levels (5, then later ones), so someone who joins after level 5 never got that spell back by levelling: they stayed a spell behind for the whole run. Each catch-up spell pick is followed by the game's usual upgrade for a new spell.
+- 1.5.6 switched this off after some host crashes. A likely cause has since been found in another mod (TripleInfusion 1.1.3 hooked a piece of game code that ~440 other parts of the game share), so update TripleInfusion to 1.1.4 along with this.
+
 ## 1.5.7
 - Drop-in: the last spell still failing every frame on the new player's game (the Proximity spell, from its own setup that never ran) is now finished too.
 
