@@ -1,3 +1,6 @@
+## 1.4.8
+- Drop-in diagnostics: while a catch-up runs, or for 10 minutes after someone drops in, every shop event (opened, cards shown, card chosen, forced pick, 'waiting for others', closed) is written to the log with what caused it. Nothing else changes.
+
 ## 1.4.7
 - **Drop-in: the catch-up shop now waits for the new player.** The game starts its normal shop countdown the moment it knows who's choosing, then picks for anyone who hasn't, so the new player's shop disappeared before they could pick. During a catch-up shop that countdown is held: it stays open for the new player (up to `[Catch-up] PickTimeoutSeconds`, and the host's cancel key still works), and everyone else is skipped automatically.
 

@@ -60,6 +60,7 @@ internal static class CatchUp
     private static float localSince;
 
     internal static bool Active => local != null;
+    internal static bool Watching => local != null || hostSession || pausedFor != null;
     private static bool IsTargetHere => local != null && Game.LocalClientId() == local.Target;
 
     // Shared with MoreSpellSlots: only one mod opens a player-only shop at a time.

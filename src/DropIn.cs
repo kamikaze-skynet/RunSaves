@@ -112,6 +112,7 @@ internal static class DropIn
             try { response.Pending = false; } catch { }
             joiners[id] = new Joiner { Id = id, Name = name, Seen = Time.unscaledTime, Key = string.IsNullOrWhiteSpace(S("PlatformPlayerId")) ? "name:" + name : S("PlatformPlayerId") };
             Plugin.Log.LogInfo($"Drop-in: {name} is joining the run in progress.");
+            lastJoinAt = Time.unscaledTime;
             Toast.Show($"{name} is joining the run...", 5f);
             return false;
         }
@@ -180,6 +181,9 @@ internal static class DropIn
     }
 
     private static readonly Dictionary<ulong, Joiner> joiners = new();
+    private static float lastJoinAt = -9999f;
+    /// <summary>A drop-in happened in the last 10 minutes (on this game, as host or joiner).</summary>
+    internal static bool Recent => Time.unscaledTime - lastJoinAt < 600f || (localSeenAt > 0f && Time.unscaledTime - localSeenAt < 600f);
 
     private static void HostTick()
     {
