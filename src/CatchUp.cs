@@ -221,6 +221,10 @@ internal static class CatchUp
             {
                 if (!storeSeenOpen) openedAt = Time.unscaledTime;
                 storeSeenOpen = true;
+                // The game starts its shop countdown as soon as it knows who chooses, then picks for whoever hasn't:
+                // the new player lost their shop before they could pick. A catch-up shop waits for them instead
+                // (our own time-out below still applies).
+                if (!gaveUp) HoldCountdown(store);
                 // Everyone else passes: the shop only waits for the player catching up.
                 if (Time.unscaledTime - openedAt > 0.5f && Time.unscaledTime >= nextPass)
                 {
@@ -279,6 +283,16 @@ internal static class CatchUp
     }
 
     private static float lastProgress, nextPass;
+
+    internal static void HoldCountdown(StoreManager store)
+    {
+        try
+        {
+            if (store.isCountdownTimerActive) store.isCountdownTimerActive = false;
+            if (store.countdownTimer < 30f) store.countdownTimer = 30f;
+        }
+        catch { }
+    }
 
     /// <summary>Counts every player except <paramref name="target"/> as having already picked in the open shop.</summary>
     internal static void PassOthers(StoreManager store, ulong target)
@@ -441,6 +455,7 @@ internal static class CatchUp
         if (store == null) return;
         bool open = false;
         try { open = store.IsShopPanelActive; } catch { }
+        if (open && !Game.IsServer) HoldCountdown(store); // no countdown on screen for a catch-up shop
         if (open && !localSawOpen)
         {
             localSawOpen = true;

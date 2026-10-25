@@ -1,3 +1,6 @@
+## 1.4.7
+- **Drop-in: the catch-up shop now waits for the new player.** The game starts its normal shop countdown the moment it knows who's choosing, then picks for anyone who hasn't, so the new player's shop disappeared before they could pick. During a catch-up shop that countdown is held: it stays open for the new player (up to `[Catch-up] PickTimeoutSeconds`, and the host's cancel key still works), and everyone else is skipped automatically.
+
 ## 1.4.6
 - **Drop-in: the catch-up shop no longer vanishes on the new player's screen.** Their game finishes starting the run a moment after their wizard appears, which closed a shop that was already open, so everyone sat frozen until the time-out. The host now waits until the new player's game says it has started.
 - If the new player still doesn't pick in time, the game picks a card for them (as when a normal shop's time runs out) and the catch-up ends within a few seconds, instead of freezing everyone for another 30 s.
