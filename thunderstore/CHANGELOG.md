@@ -1,3 +1,7 @@
+## 1.4.6
+- **Drop-in: the catch-up shop no longer vanishes on the new player's screen.** Their game finishes starting the run a moment after their wizard appears, which closed a shop that was already open, so everyone sat frozen until the time-out. The host now waits until the new player's game says it has started.
+- If the new player still doesn't pick in time, the game picks a card for them (as when a normal shop's time runs out) and the catch-up ends within a few seconds, instead of freezing everyone for another 30 s.
+
 ## 1.4.5
 - **Fixed the host's shop breaking when someone drops in.** The game gives each player a stats entry only when the run starts, so a player who joined mid-run had none. Every shop then failed on the host's game: the joiner got cards, the host got none, and the shop sat "waiting" on the host forever. Joiners now get their stats entry when they arrive.
 - Safety net: if a shop's time runs out on a screen with no cards, that player is marked done so the shop can close instead of hanging.

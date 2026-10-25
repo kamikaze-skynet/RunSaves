@@ -165,7 +165,7 @@ internal static class DropIn
         public string Name;
         public float Seen, At;
         public int Step;                 // 0 waiting, 1 identity made, 2 told everyone, 3 wizard spawning, 4 done
-        public bool Ready, StateSent, Snapshotted;
+        public bool Ready, StateSent, Snapshotted, Started;
         public string Key;              // their RunSaves player key (Steam/Epic id), known from the join request
         public float NextEarly;
         public float InitAt;            // when everyone was told who they are (0 = not yet)
@@ -273,7 +273,11 @@ internal static class DropIn
                 // Wait for their wizard and starting spell, then match them to the party.
                 int spells = Game.SpellsOf(j.Identity).Count;
                 if (spells != j.Spells) { j.Spells = spells; j.SpellsSince = now; }
-                bool settled = spells > 0 && now - j.SpellsSince > 3f && HasWizard(j.Id);
+                // Their game finishes starting the run a moment after their wizard appears, and that resets its
+                // screens: a shop opened before then vanishes on their side. Wait until they say it's done (games
+                // without this message: give them 12 s).
+                bool started = j.Started || !j.Ready || now - j.At > 12f;
+                bool settled = spells > 0 && now - j.SpellsSince > 3f && HasWizard(j.Id) && started;
                 if (!settled && now - j.At < 30f) return;
                 if (!settled)
                 {
@@ -465,6 +469,8 @@ internal static class DropIn
     }
 
     private static bool stateReceived, upgradesDone, levelDone, runStartDone;
+    private static int startedSends;
+    private static float nextStarted;
     private static float stateAt, nextHello, nextReady, localSeenAt;
     private static int level = -1, totalRevives = -1;
     private static readonly List<PlayerInit> inits = new();
@@ -557,6 +563,7 @@ internal static class DropIn
         hostVariant = -1;
         runSetupApplied = false;
         stateReceived = upgradesDone = levelDone = runStartDone = dropping = expectDropIn = replaying = false;
+        startedSends = 0;
         spellWaiting.Clear();
         helloTries = 0;
         level = totalRevives = -1;
@@ -645,6 +652,15 @@ internal static class DropIn
             if (rm != null)
                 try { Local(rm, () => { rm.StartRunOnClientRpc(); return true; }); } catch (Exception ex) { Plugin.Log.LogWarning($"Drop-in (run start): {ex.Message}"); }
             Plugin.Log.LogInfo("Drop-in: you're in.");
+            startedSends = 6;
+            nextStarted = now + 1f;
+        }
+        // Tell the host this game has finished starting the run (a few times, in case one is lost).
+        if (startedSends > 0 && now >= nextStarted)
+        {
+            startedSends--;
+            nextStarted = now + 1.5f;
+            Send("started", null);
         }
     }
 
@@ -817,6 +833,13 @@ internal static class DropIn
                         if (Game.Run == null || !Recorder.RunActive || Restorer.Busy) { Send("state", "wait", sender); break; }
                         Send("state", BuildState(sender), sender);
                         hj.StateSent = true;
+                        break;
+                    case "started":
+                        if (joiners.TryGetValue(sender, out var js) && !js.Started)
+                        {
+                            js.Started = true;
+                            Plugin.Log.LogInfo($"Drop-in: {js.Name}'s game has started the run.");
+                        }
                         break;
                     case "ready":
                         if (joiners.TryGetValue(sender, out var j) && !j.Ready)

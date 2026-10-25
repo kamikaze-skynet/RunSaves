@@ -234,19 +234,23 @@ internal static class CatchUp
                 {
                     gaveUp = true;
                     var cur = hostCurrent;
-                    Plugin.Log.LogWarning($"Catch-up: {cur.Name} didn't pick within {limit:0} s; closing the shop and skipping the rest of their picks.");
-                    Toast.Show($"{cur.Name} didn't pick in time; skipping their catch-up.", 6f);
+                    Plugin.Log.LogWarning($"Catch-up: {cur.Name} didn't pick within {limit:0} s; picking for them and skipping the rest of their picks.");
+                    Toast.Show($"{cur.Name} didn't pick in time; picked for them.", 6f);
                     DropTarget(cur.Target);
-                    try { store.SetChoiceCompletedOnServerRpc(cur.Target); } catch (Exception ex) { Plugin.Log.LogError($"Catch-up (close shop): {ex.Message}"); }
+                    // The game's own "time's up": each player still choosing gets a card picked for them.
+                    try { store.ForceChoiceForRemainingPlayers(); }
+                    catch (Exception ex)
+                    {
+                        Plugin.Log.LogWarning($"Catch-up (auto-pick): {ex.Message}");
+                        try { store.SetChoiceCompletedOnServerRpc(cur.Target); } catch { }
+                    }
                 }
-                else if (gaveUp && Time.unscaledTime - openedAt > limit + 10f)
+                else if (gaveUp && Time.unscaledTime - openedAt > limit + 6f)
                 {
-                    // Still open: let the game's own countdown run so the shop can end.
-                    hostCurrent = null;
-                    Announce(null);
-                    forceCountdown = true;
-                    try { store.StartCountdown(); } catch { }
-                    finally { forceCountdown = false; }
+                    // Still open: end the catch-up now rather than leave everyone frozen.
+                    Plugin.Log.LogWarning("Catch-up: the shop is still open after the auto-pick; ending the catch-up.");
+                    ForceEnd();
+                    return;
                 }
             }
             else if (storeSeenOpen || Time.unscaledTime - offeredAt > 20f) { hostCurrent = null; Announce(null); }
