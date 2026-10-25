@@ -251,6 +251,7 @@ internal static class DropIn
                 if (d == null) { Plugin.Log.LogWarning($"Drop-in: no session data for {j.Name}."); joiners.Remove(j.Id); return; }
                 j.Identity.InitializeOnClientsRpc(d.DisplayName, d.CharacterId, d.SkinId, d.Color, d.PlayerTitleId, d.CharacterRank,
                     d.CharacterRankProgress, d.CharacterPrestige, d.ActiveCurseLevel, d.Platform, d.PlatformPlayerId, d.PlayerId);
+                StatsFix.EnsureFor(j.Id);
                 j.At = now;
                 j.InitAt = now;
                 j.Step = 2;

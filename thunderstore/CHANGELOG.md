@@ -1,3 +1,7 @@
+## 1.4.5
+- **Fixed the host's shop breaking when someone drops in.** The game gives each player a stats entry only when the run starts, so a player who joined mid-run had none. Every shop then failed on the host's game: the joiner got cards, the host got none, and the shop sat "waiting" on the host forever. Joiners now get their stats entry when they arrive.
+- Safety net: if a shop's time runs out on a screen with no cards, that player is marked done so the shop can close instead of hanging.
+
 ## 1.4.4
 - **Drop-in: other players' spell upgrades now carry over.** When you joined mid-run, your game tried to apply another player's spell upgrades before it knew they had that spell, so those upgrades were lost (and the log filled with "key not present" errors). They now wait until the spell is there.
 
