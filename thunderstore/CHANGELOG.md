@@ -1,3 +1,6 @@
+## 1.5.7
+- Drop-in: the last spell still failing every frame on the new player's game (the Proximity spell, from its own setup that never ran) is now finished too.
+
 ## 1.5.6
 - **Drop-in: fixed the remaining error flood on the new player's game.** Spells the other players already had spawned on the new player's game before those players were set up there, so they never finished setting up and failed every frame (thousands of errors, and stutter). They're finished once the players are known.
 - **Catch-up spell picks are off by default** (new setting `[Catch-up] SpellPicks`). From party level 5 a new player got a spell pick, and the host's game crashed afterwards. Without it, new players get upgrade picks and their next spells as they level.

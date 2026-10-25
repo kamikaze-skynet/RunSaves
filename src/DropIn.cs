@@ -476,6 +476,7 @@ internal static class DropIn
     private static int startedSends;
     private static float nextSpellFix;
     private static readonly List<PlayerSpell> switchedOff = new();
+    private static readonly HashSet<IntPtr> activated = new();
     private static float nextStarted;
     private static float stateAt, nextHello, nextReady, localSeenAt;
     private static int level = -1, totalRevives = -1;
@@ -571,6 +572,7 @@ internal static class DropIn
         stateReceived = upgradesDone = levelDone = runStartDone = dropping = expectDropIn = replaying = false;
         startedSends = 0;
         switchedOff.Clear();
+        activated.Clear();
         spellWaiting.Clear();
         helloTries = 0;
         level = totalRevives = -1;
@@ -740,6 +742,9 @@ internal static class DropIn
                 var f = ps.elementDeterminerFactory;
                 if (f != null) { ps.ElementDeterminer = f.Create(new IGameplayPlayerIdentity(id.Pointer)); fixedSomething = true; }
             }
+            // Its setup stopped before the spell's own part (SetActive: e.g. the proximity spell's visuals and the
+            // caster's motor), so that part never ran: run it once.
+            if (fixedSomething && activated.Add(ps.Pointer)) ps.SetActive();
         }
         catch (Exception ex) { Plugin.Log.LogWarning($"Drop-in (finish spell setup): {ex.Message}"); }
         return fixedSomething;
