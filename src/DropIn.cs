@@ -471,6 +471,31 @@ internal static class DropIn
     private static bool dropping;      // this game joined a run in progress
     private static bool expectDropIn;  // the host said so; upgrades sent live are ignored until the full picture is in
     private static bool replaying;     // our own local replay is running
+    private static readonly List<(ulong client, Improvement imp)> spellWaiting = new();
+    private static float spellWaitUntil, nextSpellTry;
+
+    private static bool Replay(ImprovementsManager im, ulong client, Improvement imp)
+    {
+        replaying = true;
+        try { return Local(im, () => Upgrades.Send(im, client, imp)); }
+        catch { return false; }
+        finally { replaying = false; }
+    }
+
+    /// <summary>Spell upgrades go into the player's stats for that spell, which exist only once the spell is
+    /// equipped on that player in this game (else the game throws "key not present").</summary>
+    private static bool SpellReady(ulong client, Improvement imp)
+    {
+        if (imp.Kind != "SpellStat" && imp.Kind != "Infusion" && imp.Kind != "Variant") return true;
+        if (!Enum.TryParse(imp.Spell, out SpellType spell)) return true;
+        try
+        {
+            var p = Game.PlayerFor(client);
+            var attrs = p?.stats?.attributeForSpells;
+            return attrs != null && attrs.ContainsKey(spell);
+        }
+        catch { return false; }
+    }
     private static int helloTries;
 
     private static int hostVariant = -1;
@@ -531,6 +556,7 @@ internal static class DropIn
         hostVariant = -1;
         runSetupApplied = false;
         stateReceived = upgradesDone = levelDone = runStartDone = dropping = expectDropIn = replaying = false;
+        spellWaiting.Clear();
         helloTries = 0;
         level = totalRevives = -1;
         inits.Clear();
@@ -565,13 +591,32 @@ internal static class DropIn
             int n = 0, bad = 0;
             foreach (var (client, imp) in upgrades)
             {
-                replaying = true;
-                try { if (Local(im, () => Upgrades.Send(im, client, imp))) n++; else bad++; }
-                catch { bad++; }
-                finally { replaying = false; }
+                // A spell's upgrades need that spell on the player here first; they wait until it arrives.
+                if (!SpellReady(client, imp)) { spellWaiting.Add((client, imp)); continue; }
+                if (Replay(im, client, imp)) n++; else bad++;
             }
             upgradesDone = true;
-            Plugin.Log.LogInfo($"Drop-in: applied {n} of the other players' upgrades here" + (bad > 0 ? $" ({bad} skipped)." : "."));
+            spellWaitUntil = now + 60f;
+            Plugin.Log.LogInfo($"Drop-in: applied {n} of the other players' upgrades here" + (bad > 0 ? $" ({bad} skipped)" : "") +
+                               (spellWaiting.Count > 0 ? $", {spellWaiting.Count} waiting for their spells." : "."));
+        }
+        if (upgradesDone && spellWaiting.Count > 0 && im != null && now >= nextSpellTry)
+        {
+            nextSpellTry = now + 1f;
+            int n = 0;
+            for (int i = spellWaiting.Count - 1; i >= 0; i--)
+            {
+                var (client, imp) = spellWaiting[i];
+                if (!SpellReady(client, imp)) continue;
+                spellWaiting.RemoveAt(i);
+                if (Replay(im, client, imp)) n++;
+            }
+            if (n > 0) Plugin.Log.LogInfo($"Drop-in: applied {n} more spell upgrades.");
+            if (now > spellWaitUntil && spellWaiting.Count > 0)
+            {
+                Plugin.Log.LogWarning($"Drop-in: {spellWaiting.Count} spell upgrades never found their spell here; skipped.");
+                spellWaiting.Clear();
+            }
         }
 
         var party = Game.Party;

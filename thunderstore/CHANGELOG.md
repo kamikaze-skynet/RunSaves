@@ -1,3 +1,6 @@
+## 1.4.4
+- **Drop-in: other players' spell upgrades now carry over.** When you joined mid-run, your game tried to apply another player's spell upgrades before it knew they had that spell, so those upgrades were lost (and the log filled with "key not present" errors). They now wait until the spell is there.
+
 ## 1.4.3
 - **Catch-up shops only wait for the player catching up.** Everyone else passes automatically as soon as the shop opens, so nobody has to sit there waiting with nothing to pick.
 
