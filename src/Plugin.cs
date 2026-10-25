@@ -22,7 +22,7 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.RunSaves";
     public const string Name = "RunSaves";
-    public const string Version = "1.5.2";
+    public const string Version = "1.5.3";
 
     internal static new ManualLogSource Log;
 

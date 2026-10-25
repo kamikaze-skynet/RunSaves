@@ -1,3 +1,6 @@
+## 1.5.3
+- Removed two diagnostics added in 1.4.8–1.4.9 that captured the game's call stacks (one for every error, one on shop events). They're the main suspect for the game crashing shortly after a shop closed with a joined player. Shop events are still logged, without the call stacks.
+
 ## 1.5.2
 - **Fixed: the game stayed frozen after the catch-up finished.** A shop puts the game speed back to what it was when the shop opened, which during a catch-up was paused, so the last catch-up shop froze everyone again as it closed. After a catch-up ends, every game now makes sure it's running again.
 

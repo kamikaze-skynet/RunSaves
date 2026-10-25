@@ -18,9 +18,6 @@ internal static class Diag
         {
             callback = DelegateSupport.ConvertDelegate<Application.LogCallback>(new Action<string, string, LogType>(OnLog));
             Application.add_logMessageReceived(callback);
-            // This build records no call stack for most errors; ask for one (only used for the lines below).
-            try { Application.SetStackTraceLogType(LogType.Exception, StackTraceLogType.ScriptOnly); } catch { }
-            try { Application.SetStackTraceLogType(LogType.Error, StackTraceLogType.ScriptOnly); } catch { }
         }
         catch (Exception ex) { Plugin.Log.LogWarning($"Couldn't hook the game's error log: {ex.Message}"); }
     }

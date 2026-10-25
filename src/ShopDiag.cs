@@ -21,7 +21,7 @@ internal static class ShopDiag
             if (!On) return;
             string role = Game.IsServer ? "host" : "client " + Game.LocalClientId();
             string msg = $"Shop [{role}, t={Time.unscaledTime:0.0}]: {what}";
-            if (stack)
+            if (stack && false) // capturing the game's call stack here is risky (suspected crash); events only
             {
                 var st = StackTraceUtility.ExtractStackTrace();
                 var lines = st.Split('\n');
