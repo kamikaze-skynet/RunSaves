@@ -221,6 +221,12 @@ internal static class CatchUp
             {
                 if (!storeSeenOpen) openedAt = Time.unscaledTime;
                 storeSeenOpen = true;
+                // Everyone else passes: the shop only waits for the player catching up.
+                if (Time.unscaledTime - openedAt > 0.5f && Time.unscaledTime >= nextPass)
+                {
+                    nextPass = Time.unscaledTime + 1f;
+                    PassOthers(store, hostCurrent.Target);
+                }
                 // The player can't (or won't) pick: don't keep everyone waiting forever. Mark their choice as made,
                 // which closes the shop, and drop the rest of their catch-up picks.
                 float limit = Plugin.CatchUpTimeout.Value;
@@ -268,7 +274,26 @@ internal static class CatchUp
         finally { offeringOurs = false; }
     }
 
-    private static float lastProgress;
+    private static float lastProgress, nextPass;
+
+    /// <summary>Counts every player except <paramref name="target"/> as having already picked in the open shop.</summary>
+    internal static void PassOthers(StoreManager store, ulong target)
+    {
+        try
+        {
+            var made = store.playersWhoHaveMadeAChoice;
+            int passed = 0;
+            foreach (var p in Game.Players())
+            {
+                ulong id = p.OwnerClientId;
+                if (id == target || (made != null && made.Contains(id))) continue;
+                store.SetChoiceCompletedOnServerRpc(id);
+                passed++;
+            }
+            if (passed > 0) Plugin.Log.LogInfo($"Catch-up: {passed} other player(s) pass; the shop waits only for the player catching up.");
+        }
+        catch (Exception ex) { Plugin.Log.LogWarning($"Catch-up (pass others): {ex.Message}"); }
+    }
 
     /// <summary>Ends the catch-up now: no more catch-up shops, any open shop is closed (everyone's choice counts as
     /// made, then the game's own countdown), and everyone's game resumes.</summary>

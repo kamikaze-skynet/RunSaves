@@ -1,3 +1,6 @@
+## 1.4.3
+- **Catch-up shops only wait for the player catching up.** Everyone else passes automatically as soon as the shop opens, so nobody has to sit there waiting with nothing to pick.
+
 ## 1.4.2
 - **Catch-up can't freeze the game any more.** If a catch-up stops making progress (the joiner's shop is done but something else is stuck), the host ends it after about two minutes: any open shop is closed and everyone's game resumes. The host can also end it at once with **Delete** (`[Catch-up] CancelKey`).
 - The game's own shops (a level-up that happened right before the pause) now wait until the catch-up is over, instead of mixing in with the catch-up shops. Mixed-in shops were what left the host unable to pick.
