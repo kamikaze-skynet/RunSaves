@@ -1,3 +1,6 @@
+## 1.5.4
+- **Drop-in: fixed a flood of errors on the new player's game** (tens of thousands of "key not present" errors). The players already in the run had equipped their spells before the new player arrived, so the new player's game never added those spells to their stats, and their spell objects (including ones they don't have) failed every frame. The new player's game now adds the equipped spells and switches off the unused spell objects (they come back if that player equips them later).
+
 ## 1.5.3
 - Removed two diagnostics added in 1.4.8–1.4.9 that captured the game's call stacks (one for every error, one on shop events). They're the main suspect for the game crashing shortly after a shop closed with a joined player. Shop events are still logged, without the call stacks.
 

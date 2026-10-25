@@ -474,6 +474,8 @@ internal static class DropIn
 
     private static bool stateReceived, upgradesDone, levelDone, runStartDone;
     private static int startedSends;
+    private static float nextSpellFix;
+    private static readonly List<PlayerSpell> switchedOff = new();
     private static float nextStarted;
     private static float stateAt, nextHello, nextReady, localSeenAt;
     private static int level = -1, totalRevives = -1;
@@ -568,6 +570,7 @@ internal static class DropIn
         runSetupApplied = false;
         stateReceived = upgradesDone = levelDone = runStartDone = dropping = expectDropIn = replaying = false;
         startedSends = 0;
+        switchedOff.Clear();
         spellWaiting.Clear();
         helloTries = 0;
         level = totalRevives = -1;
@@ -659,6 +662,8 @@ internal static class DropIn
             startedSends = 6;
             nextStarted = now + 1f;
         }
+        // Other players' spells: see FixOthersSpells.
+        if (now >= nextSpellFix) { nextSpellFix = now + 2f; FixOthersSpells(); }
         // Tell the host this game has finished starting the run (a few times, in case one is lost).
         if (startedSends > 0 && now >= nextStarted)
         {
@@ -666,6 +671,55 @@ internal static class DropIn
             nextStarted = now + 1.5f;
             Send("started", null);
         }
+    }
+
+    /// <summary>
+    /// Joining late: the players already in the run equipped their spells before we were here, so this game never
+    /// added those spells to their stats. Their spell objects then failed every frame looking up stats that weren't
+    /// there (thousands of "key not present" errors), and spells they don't have kept trying to cast. Equipped
+    /// spells are added to their stats; spell objects for spells they don't have are switched off.
+    /// </summary>
+    private static void FixOthersSpells()
+    {
+        try
+        {
+            ulong me = Game.LocalClientId();
+            int added = 0, off = 0;
+            // Switched-off spells come back once their player equips them.
+            for (int i = switchedOff.Count - 1; i >= 0; i--)
+            {
+                var ps = switchedOff[i];
+                try
+                {
+                    if (ps == null || ps.WasCollected) { switchedOff.RemoveAt(i); continue; }
+                    var a = Game.PlayerFor(ps.OwnerClientId)?.stats?.attributeForSpells;
+                    var t = ps.configuration.SpellType;
+                    if (a != null && a.ContainsKey(t)) { ps.enabled = true; switchedOff.RemoveAt(i); }
+                    else if (Game.SpellsOf(Game.PlayerFor(ps.OwnerClientId)).Contains(t)) { Game.PlayerFor(ps.OwnerClientId).stats.AddSpell(t); ps.enabled = true; switchedOff.RemoveAt(i); }
+                }
+                catch { switchedOff.RemoveAt(i); }
+            }
+            foreach (var ps in UObject.FindObjectsOfType<PlayerSpell>())
+            {
+                if (ps == null || !ps.enabled) continue;
+                ulong owner;
+                SpellType type;
+                try { owner = ps.OwnerClientId; type = ps.configuration.SpellType; } catch { continue; }
+                if (owner == me) continue;
+                var id = Game.PlayerFor(owner);
+                var stats = id?.stats;
+                if (stats == null) continue;
+                var attrs = stats.attributeForSpells;
+                if (attrs != null && attrs.ContainsKey(type)) continue;
+                if (Game.SpellsOf(id).Contains(type))
+                {
+                    try { stats.AddSpell(type); added++; } catch (Exception ex) { Plugin.Log.LogWarning($"Drop-in (add {type}): {ex.Message}"); }
+                }
+                else { ps.enabled = false; switchedOff.Add(ps); off++; }
+            }
+            if (added + off > 0) Plugin.Log.LogInfo($"Drop-in: other players' spells set up here ({added} added to their stats, {off} unused spell objects switched off).");
+        }
+        catch (Exception ex) { Plugin.Log.LogWarning($"Drop-in (other players' spells): {ex.Message}"); }
     }
 
     private static void TryInit(PlayerInit pi)
