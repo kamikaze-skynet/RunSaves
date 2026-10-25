@@ -1,3 +1,7 @@
+## 1.4.9
+- **Drop-in: the catch-up shop can't be closed out from under the new player.** The host's game sometimes counted the new player as having picked the moment their catch-up shop opened, so it closed for everyone before they could choose. The host now ignores that until they've really picked (the time-out and the host's cancel key still end it).
+- Better error reports in the log: errors that repeat every frame are now reported once, with where they come from.
+
 ## 1.4.8
 - Drop-in diagnostics: while a catch-up runs, or for 10 minutes after someone drops in, every shop event (opened, cards shown, card chosen, forced pick, 'waiting for others', closed) is written to the log with what caused it. Nothing else changes.
 

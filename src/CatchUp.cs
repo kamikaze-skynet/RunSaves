@@ -247,7 +247,9 @@ internal static class CatchUp
                     catch (Exception ex)
                     {
                         Plugin.Log.LogWarning($"Catch-up (auto-pick): {ex.Message}");
+                        allowComplete = true;
                         try { store.SetChoiceCompletedOnServerRpc(cur.Target); } catch { }
+                        allowComplete = false;
                     }
                 }
                 else if (gaveUp && Time.unscaledTime - openedAt > limit + 6f)
@@ -271,6 +273,7 @@ internal static class CatchUp
         var next = queue.Dequeue();
         if (Game.PlayerFor(next.Target) == null) { Plugin.Log.LogInfo($"Catch-up: {next.Name} left; skipping their picks."); DropTarget(next.Target); return; }
         hostCurrent = next;
+        targetPicked = false;
         lastProgress = Time.unscaledTime;
         storeSeenOpen = false;
         gaveUp = false;
@@ -326,8 +329,10 @@ internal static class CatchUp
         Announce(null);
         if (store != null && Game.StoreBusy)
         {
+            allowComplete = true;
             foreach (var p in Game.Players())
                 try { store.SetChoiceCompletedOnServerRpc(p.OwnerClientId); } catch { }
+            allowComplete = false;
             forceCountdown = true;
             try { store.StartCountdown(); } catch { }
             finally { forceCountdown = false; }
@@ -414,6 +419,42 @@ internal static class CatchUp
     private static bool Kick_Prefix() => hostCurrent == null && local == null && pausedFor == null;
 
     /// <summary>Host: the new player picked an upgrade; apply it (Multiplier - 1) more times.</summary>
+    private static bool targetPicked, allowComplete;
+
+    /// <summary>Host: an upgrade was recorded for this player (a real pick).</summary>
+    internal static void NotePick(string key)
+    {
+        var c = hostCurrent;
+        if (c != null && key == Recorder.KeyFor(c.Target)) targetPicked = true;
+    }
+
+    // Host: during a catch-up shop, something marked the new player as done the moment the shop opened (before they
+    // could pick), so the shop closed for everyone. Their choice only counts once they've really picked (or our own
+    // time-out / cancel ends it).
+    [HarmonyPatch(typeof(StoreManager), nameof(StoreManager.SetChoiceCompletedOnServerRpc))]
+    [HarmonyPrefix]
+    private static bool Completed_Prefix(ulong clientId)
+    {
+        try
+        {
+            var c = hostCurrent;
+            if (c == null || allowComplete || gaveUp || !Game.IsServer || clientId != c.Target || targetPicked) return true;
+            if (Time.unscaledTime - offeredAt > 4f) return true; // late enough to be their own pick (e.g. a revive card)
+            if (blockedLogged++ < 3)
+            {
+                var st = UnityEngine.StackTraceUtility.ExtractStackTrace().Split('\n');
+                var sb = new System.Text.StringBuilder();
+                int n = 0;
+                foreach (var l in st) { if (l.Contains("CatchUp") || l.Contains("Harmony") || string.IsNullOrWhiteSpace(l)) continue; sb.Append("\n    ").Append(l.Trim()); if (++n >= 8) break; }
+                Plugin.Log.LogWarning($"Catch-up: kept {c.Name}'s shop open: something marked them done before they picked.{sb}");
+            }
+            return false;
+        }
+        catch { return true; }
+    }
+
+    private static int blockedLogged;
+
     internal static void OnUpgradePicked(ulong clientId, Action resend)
     {
         if (echoesExpected > 0) { echoesExpected--; return; } // one of our own re-sends coming back

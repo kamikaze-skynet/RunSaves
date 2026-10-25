@@ -80,6 +80,7 @@ internal static class Recorder
     {
         if (!Log.TryGetValue(key, out var list)) Log[key] = list = new List<Improvement>();
         list.Add(imp);
+        try { CatchUp.NotePick(key); } catch { }
     }
 
     // ---------- run lifecycle (host) ----------
