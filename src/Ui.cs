@@ -236,6 +236,7 @@ public class RunSavesUI : MonoBehaviour
         Step("toast", Toast.Tick);
         Step("catch-up", CatchUp.Tick);
         Step("drop-in", DropIn.Tick);
+        Step("left players", Ghosts.Tick);
         Step("pause", PauseButton.Tick);
         Step("save key", () =>
         {

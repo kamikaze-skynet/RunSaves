@@ -1,3 +1,7 @@
+## 1.5.9
+- **Fixed late joins stuck on "Waiting for other players to pick..."** When a joining player's connection dropped and came straight back (the game reconnects them as a new player), the first connection lingered as a ghost player: the game's party list at the top left failed on them because they had no portrait yet, and that error cut the rest of their removal short. Every shop then waited for the ghost, so the catch-up stopped after one pick and the shop screen stayed up. The ghost is now removed properly.
+- Safety net for every shop: the host passes for anyone the shop is waiting on who isn't connected any more, and catch-up shops pass everyone on the game's own player list except the player catching up.
+
 ## 1.5.8
 - **Late players get the spells they missed again** (setting renamed to `[Catch-up] MissedSpells`, on by default). The game only offers a new spell at set party levels (5, then later ones), so someone who joins after level 5 never got that spell back by levelling: they stayed a spell behind for the whole run. Each catch-up spell pick is followed by the game's usual upgrade for a new spell.
 - 1.5.6 switched this off after some host crashes. A likely cause has since been found in another mod (TripleInfusion 1.1.3 hooked a piece of game code that ~440 other parts of the game share), so update TripleInfusion to 1.1.4 along with this.

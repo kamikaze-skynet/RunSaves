@@ -22,7 +22,7 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.RunSaves";
     public const string Name = "RunSaves";
-    public const string Version = "1.5.8";
+    public const string Version = "1.5.9";
 
     internal static new ManualLogSource Log;
 
@@ -99,6 +99,7 @@ public class Plugin : BasePlugin
         harmony.PatchAll(typeof(CatchUp));
         try { harmony.PatchAll(typeof(ShopDiag)); } catch (System.Exception ex) { Log.LogWarning($"Shop diagnostics not available: {ex.Message}"); }
         try { harmony.PatchAll(typeof(StatsFix)); } catch (System.Exception ex) { Log.LogError($"Failed to apply the shop stats fix: {ex.Message}"); }
+        try { harmony.PatchAll(typeof(Ghosts)); } catch (System.Exception ex) { Log.LogError($"Failed to apply the left-player fix: {ex.Message}"); }
         try { harmony.PatchAll(typeof(DropIn)); }
         catch (System.Exception ex) { Log.LogError($"Drop-in joining couldn't be set up: {ex.Message}"); }
         AddComponent<RunSavesUI>();

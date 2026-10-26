@@ -310,6 +310,21 @@ internal static class CatchUp
 
     private static float lastProgress, nextPass, lingerSince;
 
+    /// <summary>Everyone the shop counts as a player: the wizards in the run, plus anyone else on the game's own list
+    /// (a player whose connection dropped while joining can linger there, and the shop would wait for them).</summary>
+    internal static List<ulong> Choosers(StoreManager store)
+    {
+        var ids = new List<ulong>();
+        foreach (var p in Game.Players()) if (!ids.Contains(p.OwnerClientId)) ids.Add(p.OwnerClientId);
+        try
+        {
+            var left = store?.GetPlayersLeftToChoose();
+            if (left != null) for (int i = 0; i < left.Count; i++) if (!ids.Contains(left[i])) ids.Add(left[i]);
+        }
+        catch { }
+        return ids;
+    }
+
     internal static void HoldCountdown(StoreManager store)
     {
         try
@@ -327,9 +342,8 @@ internal static class CatchUp
         {
             var made = store.playersWhoHaveMadeAChoice;
             int passed = 0;
-            foreach (var p in Game.Players())
+            foreach (ulong id in Choosers(store))
             {
-                ulong id = p.OwnerClientId;
                 if (id == target || (made != null && made.Contains(id))) continue;
                 store.SetChoiceCompletedOnServerRpc(id);
                 passed++;
@@ -352,8 +366,8 @@ internal static class CatchUp
         if (store != null && Game.StoreBusy)
         {
             allowComplete = true;
-            foreach (var p in Game.Players())
-                try { store.SetChoiceCompletedOnServerRpc(p.OwnerClientId); } catch { }
+            foreach (ulong id in Choosers(store))
+                try { store.SetChoiceCompletedOnServerRpc(id); } catch { }
             allowComplete = false;
             forceCountdown = true;
             try { store.StartCountdown(); } catch { }
@@ -392,8 +406,8 @@ internal static class CatchUp
         try
         {
             var done = new List<ulong>();
-            foreach (var p in Game.Players())
-                if (p.OwnerClientId != c.Target && !done.Contains(p.OwnerClientId)) done.Add(p.OwnerClientId);
+            foreach (ulong id in Choosers(__instance))
+                if (id != c.Target && !done.Contains(id)) done.Add(id);
             __instance.SetChoosingPlayersRpc(new Il2CppStructArray<ulong>(done.ToArray()));
         }
         catch (Exception ex) { Plugin.Log.LogError($"Catch-up choosers: {ex.Message}"); }
